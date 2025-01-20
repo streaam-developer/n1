@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.pool import QueuePool
 from mfinder import DB_URL
-from sqlalchemy import create_engine, Column, String, Integer, Boolean, BigInteger
+from sqlalchemy import create_engine, Column, String, Integer, Boolean, BigInteger, Numeric
 BASE = declarative_base()
 from sqlalchemy import create_engine, Column, String, Integer, Text
 from sqlalchemy.ext.declarative import declarative_base
