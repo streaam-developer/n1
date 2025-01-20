@@ -8,7 +8,8 @@ from sqlalchemy.pool import StaticPool
 from mfinder import DB_URL
 from sqlalchemy import create_engine, Column, String, Integer, Boolean, BigInteger
 BASE = declarative_base()
-
+from sqlalchemy import create_engine, Column, String, Integer, Text
+from sqlalchemy.ext.declarative import declarative_base
 class Filters(BASE):
     __tablename__ = 'filters'
     filters = Column(String(255), primary_key=True)  # Define a length for the key
