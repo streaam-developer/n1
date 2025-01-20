@@ -2,7 +2,7 @@ import threading
 from sqlalchemy import create_engine, Column, String, Integer, Boolean, BigInteger
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import QueuePool
 from sqlalchemy.orm.exc import NoResultFound
 from mfinder import DB_URL, LOGGER
 
@@ -43,7 +43,7 @@ class Settings(BASE):
         self.list_mode = list_mode
 
 def start() -> scoped_session:
-    engine = create_engine(DB_URL, poolclass=StaticPool)
+    engine = create_engine(DB_URL, poolclass=QueuePool)
     BASE.metadata.bind = engine
     BASE.metadata.create_all(engine)
     return scoped_session(sessionmaker(bind=engine, autoflush=False))

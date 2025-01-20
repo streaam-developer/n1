@@ -4,7 +4,7 @@ from sqlalchemy import Column, TEXT, BigInteger
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import QueuePool
 from mfinder import DB_URL
 
 
@@ -14,7 +14,7 @@ BASE = declarative_base()
 class Broadcast(BASE):
     __tablename__ = "broadcast"
     user_id = Column(BigInteger, primary_key=True)
-    user_name = Column(TEXT)
+    user_name = Column(String(255))
 
     def __init__(self, user_id, user_name):
         self.user_id = user_id
@@ -22,7 +22,7 @@ class Broadcast(BASE):
 
 
 def start() -> scoped_session:
-    engine = create_engine(DB_URL, poolclass=StaticPool)
+    engine = create_engine(DB_URL, poolclass=QueuePool)
     BASE.metadata.bind = engine
     BASE.metadata.create_all(engine)
     return scoped_session(sessionmaker(bind=engine, autoflush=False))

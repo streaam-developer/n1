@@ -4,7 +4,7 @@ from sqlalchemy import Column, TEXT, Numeric
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import QueuePool
 from mfinder import DB_URL, LOGGER
 from mfinder.utils.helpers import unpack_new_file_id
 
@@ -15,12 +15,12 @@ BASE = declarative_base()
 class Files(BASE):
     __tablename__ = "files"
     file_name = Column(TEXT, primary_key=True)
-    file_id = Column(TEXT)
-    file_ref = Column(TEXT)
+    file_id = Column(String(255))
+    file_ref = Column(String(255))
     file_size = Column(Numeric)
-    file_type = Column(TEXT)
-    mime_type = Column(TEXT)
-    caption = Column(TEXT)
+    file_type = Column(String(255))
+    mime_type = Column(String(255))
+    caption = Column(String(255))
 
     def __init__(
         self, file_name, file_id, file_ref, file_size, file_type, mime_type, caption
@@ -35,7 +35,7 @@ class Files(BASE):
 
 
 def start() -> scoped_session:
-    engine = create_engine(DB_URL, poolclass=StaticPool)
+    engine = create_engine(DB_URL, poolclass=QueuePool)
     BASE.metadata.bind = engine
     BASE.metadata.create_all(engine)
     return scoped_session(sessionmaker(bind=engine, autoflush=False))

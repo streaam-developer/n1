@@ -4,16 +4,21 @@ from sqlalchemy import Column, TEXT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import QueuePool
 from mfinder import DB_URL
 from sqlalchemy import create_engine, Column, String, Integer, Boolean, BigInteger
 BASE = declarative_base()
 from sqlalchemy import create_engine, Column, String, Integer, Text
 from sqlalchemy.ext.declarative import declarative_base
-class Filters(BASE):
-    __tablename__ = 'filters'
-    filters = Column(String(255), primary_key=True)  # Define a length for the key
-    message = Column(TEXT)
+class Files(BASE):
+    __tablename__ = 'files'
+    file_name = Column(String(255), primary_key=True)  # Define a length for VARCHAR
+    file_id = Column(Text)
+    file_ref = Column(Text)
+    file_size = Column(Numeric)
+    file_type = Column(Text)
+    mime_type = Column(Text)
+    caption = Column(Text)
 
     def __init__(self, filters, message):
         self.filters = filters
@@ -21,7 +26,7 @@ class Filters(BASE):
 
 
 def start() -> scoped_session:
-    engine = create_engine(DB_URL, poolclass=StaticPool)
+    engine = create_engine(DB_URL, poolclass=QueuePool)
     BASE.metadata.bind = engine
     BASE.metadata.create_all(engine)
     return scoped_session(sessionmaker(bind=engine, autoflush=False))
