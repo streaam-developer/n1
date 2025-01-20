@@ -10,12 +10,12 @@ BASE = declarative_base()
 
 class AdminSettings(BASE):
     __tablename__ = "admin_settings"
-    setting_name = Column(String(255), primary_key=True)
+    setting_name = Column(String(255), primary_key=True)  # Specify length
     auto_delete = Column(Integer)
-    custom_caption = Column(String(255))  # Specify length for VARCHAR
+    custom_caption = Column(String(255))  # Specify length
     fsub_channel = Column(Integer)
-    channel_link = Column(String)
-    caption_uname = Column(String)
+    channel_link = Column(String(255))  # Specify length
+    caption_uname = Column(String(255))  # Specify length
     repair_mode = Column(Boolean)
 
     def __init__(self, setting_name="default"):
