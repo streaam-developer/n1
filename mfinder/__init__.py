@@ -14,7 +14,7 @@ id_pattern = re.compile(r"^.\d+$")
 APP_ID = os.environ.get("APP_ID", "904789")
 API_HASH = os.environ.get("API_HASH", "2262ef67ced426b9eea57867b11666a1")
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "6233167923:AAHnvFQBJ7YlwpwfhYv9ZTD98HjgYRFeYxg")
-DB_URL = os.environ.get("DB_URL", "mysql://mediafi-35303337d0b6:mediafia1@mysql.gb.stackcp.com:64201/mediafi-35303337d0b6")
+DB_URL = os.environ.get("DB_URL", "mysql+mysqldb://mediafi-35303337d0b6:mediafia1@mysql.gb.stackcp.com:64201/mediafi-35303337d0b6")
 OWNER_ID = int(os.environ.get("OWNER_ID", "6597445442"))
 ADMINS = [
     int(user) if id_pattern.search(user) else user
