@@ -12,7 +12,7 @@ class AdminSettings(BASE):
     __tablename__ = "admin_settings"
     setting_name = Column(String(255), primary_key=True)
     auto_delete = Column(Integer)
-    custom_caption = Column(String)
+    custom_caption = Column(String(255))  # Specify length for VARCHAR
     fsub_channel = Column(Integer)
     channel_link = Column(String)
     caption_uname = Column(String)
