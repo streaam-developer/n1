@@ -6,14 +6,12 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.pool import StaticPool
 from mfinder import DB_URL
-
-
+from sqlalchemy import create_engine, Column, String, Integer, Boolean, BigInteger
 BASE = declarative_base()
 
-
 class Filters(BASE):
-    __tablename__ = "filters"
-    filters = Column(TEXT, primary_key=True)
+    __tablename__ = 'filters'
+    filters = Column(String(255), primary_key=True)  # Define a length for the key
     message = Column(TEXT)
 
     def __init__(self, filters, message):
