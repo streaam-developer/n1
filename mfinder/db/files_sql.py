@@ -7,7 +7,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.pool import QueuePool
 from mfinder import DB_URL, LOGGER
 from mfinder.utils.helpers import unpack_new_file_id
-
+from sqlalchemy import create_engine, Column, String, Integer, Boolean, BigInteger, Numeric
 
 BASE = declarative_base()
 

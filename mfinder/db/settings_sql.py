@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import QueuePool
 from sqlalchemy.orm.exc import NoResultFound
 from mfinder import DB_URL, LOGGER
-
+from sqlalchemy import create_engine, Column, String, Integer, Boolean, BigInteger, Numeric
 BASE = declarative_base()
 
 class AdminSettings(BASE):
