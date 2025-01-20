@@ -68,7 +68,7 @@ async def index_process(bot, user_id, chat_id, last_msg_id, kb, cancel_state, st
     msg = await bot.send_message(user_id, "Processing Index... ⏳", reply_markup=kb)
     total_files = 0
     error_files = 0
-    batch_size = 10
+    batch_size = 80
     processed = set()
 
     try:
