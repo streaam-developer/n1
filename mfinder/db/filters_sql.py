@@ -10,6 +10,17 @@ from sqlalchemy import create_engine, Column, String, Integer, Boolean, BigInteg
 BASE = declarative_base()
 from sqlalchemy import create_engine, Column, String, Integer, Text
 from sqlalchemy.ext.declarative import declarative_base
+
+class Filters(BASE):
+    __tablename__ = "filters"
+    filters = Column(String(255), primary_key=True)
+    message = Column(TEXT)
+
+    def __init__(self, filters, message):
+        self.filters = filters
+        self.message = message
+
+
 class Files(BASE):
     __tablename__ = 'files'
     file_name = Column(String(255), primary_key=True)  # Define a length for VARCHAR
