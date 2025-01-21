@@ -98,7 +98,7 @@ async def group_filter_(bot, message):
         )
     # Force subscription check
     if not await check_force_sub(bot, user_id, private=False):
-        await bot.reply_text(text=message_text,
+        await message.reply_text(text=message_text,
                 reply_markup=join_button
             )
         return
