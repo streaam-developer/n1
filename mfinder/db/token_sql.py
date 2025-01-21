@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from mfinder import *
 from sqlalchemy.pool import QueuePool
 from sqlalchemy.exc import IntegrityError
+from datetime import datetime
 
 # SQLAlchemy base and table definition
 Base = declarative_base()
@@ -48,7 +49,7 @@ async def db_update_verify_status(user_id, verify):
     session = Session()
     try:
         verify_entry = session.query(Verify).filter_by(user_id=user_id).one_or_none()
-        
+
         # If the entry exists, update it
         if verify_entry:
             verify_entry.is_verified = verify['is_verified']
@@ -67,7 +68,7 @@ async def db_update_verify_status(user_id, verify):
             session.add(new_entry)
 
         session.commit()
-        
+
     except IntegrityError as e:
         # Handle unique constraint violation by updating the record instead
         session.rollback()  # Rollback the transaction if an error occurs
@@ -82,6 +83,20 @@ async def db_update_verify_status(user_id, verify):
             session.commit()
         else:
             raise e  # Raise the exception if it's not a duplicate error
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()
+
+async def db_check_expiry():
+    session = Session()
+    try:
+        current_time = int(datetime.utcnow().timestamp())
+        expired_users = session.query(Verify).filter(Verify.verified_time < current_time, Verify.is_verified == True).all()
+        for user in expired_users:
+            user.is_verified = False
+            session.commit()
     except Exception as e:
         session.rollback()
         raise e
