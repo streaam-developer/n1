@@ -64,8 +64,7 @@ async def filter_(bot, message):
         if not await is_subscribed(bot, message, [channel_id]):
             # If user is not subscribed, create an invite link and add to unjoined channels
             try:
-                invite_link = await bot.create_chat_invite_link(channel_id, creates_join_request=True)
-                invite_links.append(invite_link.invite_link)
+                invite_link = AUTH_LINK
                 unjoined_channels.append(channel_id)
             except ChatAdminRequired:
                 logger.error(f"Make sure Bot is admin in channel: {channel_id}")
@@ -161,8 +160,7 @@ async def group_filter_(bot, message):
         if not await is_subscribed(bot, message, [channel_id]):
             # If user is not subscribed, create an invite link and add to unjoined channels
             try:
-                invite_link = await bot.create_chat_invite_link(channel_id, creates_join_request=True)
-                invite_links.append(invite_link.invite_link)
+                invite_link = AUTH_LINK
                 unjoined_channels.append(channel_id)
             except ChatAdminRequired:
                 logger.error(f"Make sure Bot is admin in channel: {channel_id}")

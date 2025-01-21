@@ -4,7 +4,7 @@ from mfinder.db.broadcast_sql import check_join_request, add_join_request, delet
 from mfinder import ADMINS, SECOND_AUTH_CHANNEL, THIRD_AUTH_CHANNEL, AUTH_LINK
 
 from mfinder.utils.utils import *
-FSUB_CHANNELS = [SECOND_AUTH_CHANNEL, THIRD_AUTH_CHANNEL]
+FSUB_CHANNELS = [THIRD_AUTH_CHANNEL]
 
 @Client.on_chat_join_request(filters.group | filters.channel)
 async def autoapprove(client: Client, message: ChatJoinRequest):
