@@ -16,6 +16,9 @@ from mfinder.db.files_sql import (
     get_file_details,
     get_precise_filter_results,
 )
+import pytz, traceback, requests, string, tracemalloc, logging, random, math, ast, os, re, asyncio
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR)
 from mfinder.db.settings_sql import (
     get_search_settings,
     get_admin_settings,
@@ -25,8 +28,9 @@ from mfinder.db.settings_sql import (
 from mfinder.db.ban_sql import is_banned
 from mfinder.db.filters_sql import is_filter
 from mfinder import LOGGER
-
-
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto, ChatJoinRequest
+from pyrogram import Client, filters, enums
+from .join_req import FSUB_CHANNELS
 import re
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -36,8 +40,9 @@ from mfinder.db.settings_sql import get_channel, get_link
 from mfinder.db.ban_sql import is_banned
 from mfinder.db.filters_sql import is_filter
 from mfinder import LOGGER
-
-
+from pyrogram import Client, filters, enums
+from mfinder import *
+from utils.utils import temp, is_subscribed
 @Client.on_message(~filters.regex(r"^\/") & filters.text & filters.private & filters.incoming)
 async def filter_(bot, message):
     user_id = message.from_user.id
@@ -51,34 +56,53 @@ async def filter_(bot, message):
         await message.reply_text("You are banned. You can't use this bot.", quote=True)
         return
 
-    # Get the channel information
-    force_sub = await get_channel()
-    if force_sub:
-        try:
-            # Check if the user is a member of the channel
-            user = await bot.get_chat_member(int(force_sub), user_id)
-            if user.status == ChatMemberStatus.BANNED:
-                await message.reply_text("Sorry, you are banned from using the bot.", quote=True)
-                return
-        except UserNotParticipant:
-            # Retrieve the dynamic join link from the database
-            join_link = await get_link()
-            await message.reply_text(
-                text="**Please join my Update Channel to use this Bot!**",
-                reply_markup=InlineKeyboardMarkup(
-                    [[InlineKeyboardButton("🤖 Join Channel", url=join_link)]]
-                ),
-                quote=True,
-            )
-            return
-        except Exception as e:
-            LOGGER.warning(e)
-            await message.reply_text(
-                text="Something went wrong. Please contact support.",
-                quote=True,
-            )
-            return
+    # Check subscription for all channels in FSUB_CHANNELS
+    unjoined_channels = []  # To store channels that are not yet joined
+    invite_links = []
 
+    for channel_id in FSUB_CHANNELS:
+        if not await is_subscribed(bot, message, [channel_id]):
+            # If user is not subscribed, create an invite link and add to unjoined channels
+            try:
+                invite_link = await bot.create_chat_invite_link(channel_id, creates_join_request=True)
+                invite_links.append(invite_link.invite_link)
+                unjoined_channels.append(channel_id)
+            except ChatAdminRequired:
+                logger.error(f"Make sure Bot is admin in channel: {channel_id}")
+                return
+    
+    # If user is not subscribed to any channel, show invite buttons
+    if unjoined_channels and ASKFSUBINGRP:
+        btn = []
+        # Add buttons for only unjoined channels
+        for idx, invite_link in enumerate(invite_links):
+            btn.append([InlineKeyboardButton(f"Jᴏɪɴ Uᴘᴅᴀᴛᴇ Cʜᴀɴɴᴇʟ {idx + 1} ♂️", url=invite_link)])
+            
+        # Add "I'm Subscribed" button only if there are unjoined channels
+        btn.append([InlineKeyboardButton("I'm Subscribed ✅", callback_data=f"groupchecksub")])
+        
+        # Send the subscribe message with user mention
+        subscribe_message = await message.reply(
+            f"🔰 ʜᴇʏ <u><b>{message.from_user.mention}🙋</b></u>,\n\n‣<u><b> ENG:-</b></u> Pʟᴇᴀsᴇ <u>sᴜʙsᴄʀɪʙᴇ</u> ᴀʟʟ ᴄʜᴀɴɴᴇʟs ᴛᴏ ʀᴇǫᴜᴇsᴛ ɪɴ ɢʀᴏᴜᴘ.\nᴛʜᴇɴ ᴄʟɪᴄᴋ ᴏɴ 𝗶'𝗺 𝘀𝘂𝗯𝘀𝗰𝗿𝗶𝗯𝗲𝗱 ʙᴜᴛᴛᴏɴ.\n‣<u><b> हिंदी:-</b></u> ग्रुप में फाइल रिक्वेस्ट करने के लिए, कृपया हमारे अपडेट चैनल को जाईन कीजिए।\n‣<b><u> Tʀᴀɴsʟᴀᴛᴇ Tʜɪs Mᴇssᴀɢᴇ ɪɴ :-</u>\n  <a href='https://telegra.ph/Force-subscribe-in-Tamil-09-16'>தமிழ்</a> || <a href='https://telegra.ph/Force-subscribe-in-Telugu-09-16'>తెలుగు</a> || <a href='https://telegra.ph/Force-subscribe-in-Malayalam-09-16'>മലയാളം</a> ||</b>",
+            reply_markup=InlineKeyboardMarkup(btn),
+            disable_web_page_preview=True,
+            parse_mode=enums.ParseMode.HTML
+        )        
+        temp.DEL_MSG[message.from_user.id] = subscribe_message
+
+        try:
+            await asyncio.sleep(60)
+            await message.delete()
+        except Exception as e:
+            logger.error(f"Failed to delete message: {e}")
+            
+        try:
+            await subscribe_message.delete()
+        except Exception as e:
+            logger.error(f"Failed to delete subscribe message: {e}")
+
+        return
+     
     # Check if the message matches any filter
     fltr = await is_filter(message.text)
     if fltr:
@@ -129,34 +153,53 @@ async def group_filter_(bot, message):
         await message.reply_text("You are banned from using this bot.", quote=True)
         return
 
-    # Get the channel information
-    force_sub = await get_channel()
-    if force_sub:
-        try:
-            # Check if the user is a member of the channel
-            user = await bot.get_chat_member(int(force_sub), user_id)
-            if user.status == ChatMemberStatus.BANNED:
-                await message.reply_text("Sorry, you are banned from using the bot.", quote=True)
-                return
-        except UserNotParticipant:
-            # Retrieve the dynamic join link from the database
-            join_link = await get_link()
-            await message.reply_text(
-                text="**Please join my Update Channel to use this Bot!**",
-                reply_markup=InlineKeyboardMarkup(
-                    [[InlineKeyboardButton("🤖 Join Channel", url=join_link)]]
-                ),
-                quote=True,
-            )
-            return
-        except Exception as e:
-            LOGGER.warning(e)
-            await message.reply_text(
-                text="Something went wrong. Please contact support.",
-                quote=True,
-            )
-            return
+    # Check subscription for all channels in FSUB_CHANNELS
+    unjoined_channels = []  # To store channels that are not yet joined
+    invite_links = []
 
+    for channel_id in FSUB_CHANNELS:
+        if not await is_subscribed(bot, message, [channel_id]):
+            # If user is not subscribed, create an invite link and add to unjoined channels
+            try:
+                invite_link = await bot.create_chat_invite_link(channel_id, creates_join_request=True)
+                invite_links.append(invite_link.invite_link)
+                unjoined_channels.append(channel_id)
+            except ChatAdminRequired:
+                logger.error(f"Make sure Bot is admin in channel: {channel_id}")
+                return
+    
+    # If user is not subscribed to any channel, show invite buttons
+    if unjoined_channels and ASKFSUBINGRP:
+        btn = []
+        # Add buttons for only unjoined channels
+        for idx, invite_link in enumerate(invite_links):
+            btn.append([InlineKeyboardButton(f"Jᴏɪɴ Uᴘᴅᴀᴛᴇ Cʜᴀɴɴᴇʟ {idx + 1} ♂️", url=invite_link)])
+            
+        # Add "I'm Subscribed" button only if there are unjoined channels
+        btn.append([InlineKeyboardButton("I'm Subscribed ✅", callback_data=f"groupchecksub")])
+        
+        # Send the subscribe message with user mention
+        subscribe_message = await message.reply(
+            f"🔰 ʜᴇʏ <u><b>{message.from_user.mention}🙋</b></u>,\n\n‣<u><b> ENG:-</b></u> Pʟᴇᴀsᴇ <u>sᴜʙsᴄʀɪʙᴇ</u> ᴀʟʟ ᴄʜᴀɴɴᴇʟs ᴛᴏ ʀᴇǫᴜᴇsᴛ ɪɴ ɢʀᴏᴜᴘ.\nᴛʜᴇɴ ᴄʟɪᴄᴋ ᴏɴ 𝗶'𝗺 𝘀𝘂𝗯𝘀𝗰𝗿𝗶𝗯𝗲𝗱 ʙᴜᴛᴛᴏɴ.\n‣<u><b> हिंदी:-</b></u> ग्रुप में फाइल रिक्वेस्ट करने के लिए, कृपया हमारे अपडेट चैनल को जाईन कीजिए।\n‣<b><u> Tʀᴀɴsʟᴀᴛᴇ Tʜɪs Mᴇssᴀɢᴇ ɪɴ :-</u>\n  <a href='https://telegra.ph/Force-subscribe-in-Tamil-09-16'>தமிழ்</a> || <a href='https://telegra.ph/Force-subscribe-in-Telugu-09-16'>తెలుగు</a> || <a href='https://telegra.ph/Force-subscribe-in-Malayalam-09-16'>മലയാളം</a> ||</b>",
+            reply_markup=InlineKeyboardMarkup(btn),
+            disable_web_page_preview=True,
+            parse_mode=enums.ParseMode.HTML
+        )        
+        temp.DEL_MSG[message.from_user.id] = subscribe_message
+
+        try:
+            await asyncio.sleep(60)
+            await message.delete()
+        except Exception as e:
+            logger.error(f"Failed to delete message: {e}")
+            
+        try:
+            await subscribe_message.delete()
+        except Exception as e:
+            logger.error(f"Failed to delete subscribe message: {e}")
+
+        return
+     
     # Check if the message matches any filter
     fltr = await is_filter(message.text)
     if fltr:
@@ -455,3 +498,6 @@ def get_size(size):
         i += 1
         size /= 1024.0
     return f"{size:.2f} {units[i]}"
+
+
+

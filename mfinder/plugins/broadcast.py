@@ -9,7 +9,6 @@ from mfinder.db.db_support import users_info
 from mfinder.db.broadcast_sql import query_msg
 from mfinder import ADMINS, OWNER_ID
 
-
 @Client.on_message(
     filters.private & filters.command("stats") & filters.user(ADMINS)
 )
@@ -23,59 +22,90 @@ async def get_subscribers_count(bot: Client, message: Message):
     stats_msg = f"**Stats**\nTotal Subscribers: `{total_users}`"
     await msg.edit(stats_msg)
 
-
 @Client.on_message(
     filters.private & filters.command("broadcast") & filters.user(ADMINS)
 )
-async def send_text(bot, message: Message):
-    """Command to broadcast a message to all subscribers."""
-    if "broadcast" in message.text and message.reply_to_message is not None:
-        start_time = time.time()
-        progress_msg = await message.reply_text("Broadcasting started...")
-        
-        # Fetch all user IDs
-        query = await query_msg()
-        if not query:
-            await progress_msg.edit_text("No users found in the database!")
-            LOGGER.error("Broadcast aborted: No users found in the database!")
-            return
+async def pm_broadcast(bot, message):
+    BATCH_SIZE = 100  # Number of users processed in each batch
+    SEMAPHORE_LIMIT = 60  # Maximum concurrent tasks
+    BATCH_DELAY = 1  # Delay in seconds between batches
 
-        LOGGER.info(f"Users fetched from DB: {len(query)}")
-        
-        success = 0
-        failed = 0
-        
-        for row in query:
-            chat_id = int(row[0])  # Fetch user ID
-            try:
-                # Send message to user
-                await bot.copy_message(
-                    chat_id=chat_id,
-                    from_chat_id=message.chat.id,
-                    message_id=message.reply_to_message_id,
-                    reply_markup=message.reply_to_message.reply_markup,
+    # Ask for the broadcast message
+    b_msg = await bot.ask(chat_id=message.from_user.id, text="Now Send Me Your Broadcast Message")
+
+    try:
+        users = await query_msg()  # Get all users
+        sts = await message.reply_text("Broadcasting your messages...")
+        start_time = time.time()
+
+        total_users = len(users)
+        done, blocked, deleted, failed, success = 0, 0, 0, 0, 0
+
+        sem = asyncio.Semaphore(SEMAPHORE_LIMIT)
+
+        async def send_message(user):
+            nonlocal success, blocked, deleted, failed, done
+            async with sem:
+                user_id = int(user[0])  # Extract user ID from the query
+                try:
+                    await bot.copy_message(
+                        chat_id=user_id,
+                        from_chat_id=b_msg.chat.id,
+                        message_id=b_msg.id
+                    )
+                    success += 1
+                except FloodWait as e:
+                    LOGGER.warning(f"FloodWait for {e.value} seconds. Pausing...")
+                    await asyncio.sleep(e.value)
+                except Exception as e:
+                    if "blocked" in str(e).lower():
+                        blocked += 1
+                    elif "deleted" in str(e).lower():
+                        deleted += 1
+                    else:
+                        failed += 1
+                    LOGGER.error(f"Failed to send to {user_id}: {e}")
+                finally:
+                    done += 1
+
+        batch_tasks = []
+        batch_count = 0
+
+        for user in users:
+            batch_tasks.append(send_message(user))
+            batch_count += 1
+
+            if batch_count >= BATCH_SIZE:
+                await asyncio.gather(*batch_tasks)
+                batch_tasks = []
+                batch_count = 0
+
+                # Live status update
+                await sts.edit(
+                    f"Broadcast in progress:\n\n"
+                    f"Total Users: {total_users}\n"
+                    f"Completed: {done}/{total_users}\n"
+                    f"Success: {success}\n"
+                    f"Blocked: {blocked}\n"
+                    f"Deleted: {deleted}\n"
+                    f"Failed: {failed}"
                 )
-                success += 1
-                LOGGER.info(f"Broadcast sent to {chat_id}")
-            except FloodWait as e:
-                LOGGER.warning(f"FloodWait for {e.value} seconds. Pausing...")
-                await asyncio.sleep(e.value)
-            except Exception as e:
-                LOGGER.error(f"Failed to send to {chat_id}: {e}")
-                failed += 1
-            
-            # Optional: Update live stats
-            await progress_msg.edit_text(
-                f"**Broadcasting...**\nSent: `{success}`\nFailed: `{failed}`\nRemaining: `{len(query) - (success + failed)}`"
-            )
-        
-        # Calculate time taken
+                await asyncio.sleep(BATCH_DELAY)
+
+        # Process any remaining users
+        if batch_tasks:
+            await asyncio.gather(*batch_tasks)
+
         time_taken = datetime.timedelta(seconds=int(time.time() - start_time))
-        await progress_msg.edit_text(
-            f"**Broadcast Completed**\nSent to: `{success}`\nBlocked / Deleted: `{failed}`\nCompleted in `{time_taken}` HH:MM:SS"
+        await sts.edit(
+            f"Broadcast Completed:\n\n"
+            f"Time Taken: {time_taken}\n"
+            f"Total Users: {total_users}\n"
+            f"Completed: {done}/{total_users}\n"
+            f"Success: {success}\n"
+            f"Blocked: {blocked}\n"
+            f"Deleted: {deleted}\n"
+            f"Failed: {failed}"
         )
-    else:
-        reply_error = "`Use this command as a reply to any telegram message.`"
-        msg = await message.reply_text(reply_error)
-        await asyncio.sleep(8)
-        await msg.delete()
+    except Exception as e:
+        LOGGER.error(f"Broadcasting error: {e}")

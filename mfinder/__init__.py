@@ -7,6 +7,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+def is_enabled(value, default):
+    if value.lower() in ["true", "yes", "1", "enable", "y"]:
+        return True
+    elif value.lower() in ["false", "no", "0", "disable", "n"]:
+        return False
+    else:
+        return default
 
 id_pattern = re.compile(r"^.\d+$")
 
@@ -34,6 +41,18 @@ START_MSG = const.START_MSG
 START_KB = const.START_KB
 HELP_MSG = const.HELP_MSG
 HELP_KB = const.HELP_KB
+
+ASKFSUBINGRP = bool(os.environ.get('ASKFSUBINGRP', 1))
+JOINREQ_MSG = bool(os.environ.get('JOINREQ_MSG', False))
+
+auth_channel = os.environ.get('AUTH_CHANNEL', '-1002348104910')  # public channel 
+second_auth_channel = os.environ.get('SECOND_AUTH_CHANNEL', '-1002346388593')  # Add the second auth channel or Group (should private)
+third_auth_channel = os.environ.get('THIRD_AUTH_CHANNEL', '-1002399909983')  # Add the third auth channel or Group (should private)
+
+
+AUTH_CHANNEL = int(auth_channel) if auth_channel and id_pattern.search(auth_channel) else None
+SECOND_AUTH_CHANNEL = int(second_auth_channel) if second_auth_channel and id_pattern.search(second_auth_channel) else None
+THIRD_AUTH_CHANNEL = int(third_auth_channel) if third_auth_channel and id_pattern.search(third_auth_channel) else None
 
 
 # logging Conf
