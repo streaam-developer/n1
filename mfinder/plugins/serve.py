@@ -133,7 +133,7 @@ async def group_filter_(bot, message):
 
 async def check_force_sub(bot, user_id):
     try:
-        force_sub = AUTH_CHANNEL
+        force_sub = "-1002348104910"
         if force_sub:
             user = await bot.get_chat_member(int(force_sub), user_id)
             if user.status == ChatMemberStatus.BANNED:
