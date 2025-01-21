@@ -11,7 +11,7 @@ async def autoapprove(client: Client, message: ChatJoinRequest):
     user = message.from_user
     all_joined = True
 
-    # Check membership for each channel in FSUB_CHANNELS
+    # Check subscription for all required channels
     for channel_id in FSUB_CHANNELS:
         if not await is_subscribed(client, message, channel_id, AUTH_LINK):
             all_joined = False
@@ -20,6 +20,7 @@ async def autoapprove(client: Client, message: ChatJoinRequest):
     # Approve the join request if subscribed to all channels
     if all_joined:
         await client.approve_chat_join_request(chat_id=message.chat.id, user_id=user.id)
+
 
 @Client.on_message(filters.command("delreq") & filters.private & filters.user(ADMINS))
 async def del_requests(client, message):

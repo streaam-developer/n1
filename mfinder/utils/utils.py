@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 from pyrogram.errors import UserNotParticipant
 from pyrogram.errors import UserNotParticipant, ChatAdminRequired
+from pyrogram.errors import UserNotParticipant, ChatAdminRequired
 
 async def is_subscribed(bot, query, channel_id, invite_link):
     """
@@ -25,11 +26,18 @@ async def is_subscribed(bot, query, channel_id, invite_link):
         if user.status in ["member", "administrator", "creator"]:
             return True
     except UserNotParticipant:
-        # User is not subscribed
-        await query.reply_text(  # Correctly use query.reply_text
-            f"Please join the private channel using this link: [Join Here]({invite_link})",
-            disable_web_page_preview=True,
-        )
+        # Respond based on the type of query (Message or ChatJoinRequest)
+        if isinstance(query, ChatJoinRequest):
+            await bot.send_message(
+                chat_id=query.from_user.id,
+                text=f"Please join the channel to continue: [Join Here]({invite_link})",
+                disable_web_page_preview=True,
+            )
+        else:
+            await query.reply_text(
+                f"Please join the channel to continue: [Join Here]({invite_link})",
+                disable_web_page_preview=True,
+            )
         return False
     except ChatAdminRequired:
         # Bot lacks admin privileges
