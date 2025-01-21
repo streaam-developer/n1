@@ -107,3 +107,50 @@ async def delete_all_join_requests():
         except Exception as e:
             SESSION.rollback()
             raise e
+
+class JoinRequest(BASE):
+    __tablename__ = "join_requests"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)  # Unique ID
+    user_id = Column(BigInteger, nullable=False)
+    chat_id = Column(BigInteger, nullable=False)
+
+    def __init__(self, user_id, chat_id):
+        self.user_id = user_id
+        self.chat_id = chat_id
+
+async def add_join_request(user_id, chat_id):
+    """Add a join request to the join_requests table."""
+    with INSERTION_LOCK:
+        try:
+            # Check if the join request already exists
+            existing_request = SESSION.query(JoinRequest).filter_by(user_id=user_id, chat_id=chat_id).one_or_none()
+            if not existing_request:
+                # Add a new join request
+                new_request = JoinRequest(user_id=user_id, chat_id=chat_id)
+                SESSION.add(new_request)
+                SESSION.commit()
+        except Exception as e:
+            SESSION.rollback()
+            raise e
+
+
+async def check_join_request(user_id, chat_id):
+    """Check if a join request exists in the join_requests table."""
+    with INSERTION_LOCK:
+        try:
+            result = SESSION.query(JoinRequest).filter_by(user_id=user_id, chat_id=chat_id).one_or_none()
+            return result is not None
+        except Exception as e:
+            SESSION.rollback()
+            raise e
+
+
+async def delete_all_join_requests():
+    """Delete all join requests from the join_requests table."""
+    with INSERTION_LOCK:
+        try:
+            SESSION.query(JoinRequest).delete()
+            SESSION.commit()
+        except Exception as e:
+            SESSION.rollback()
+            raise e
