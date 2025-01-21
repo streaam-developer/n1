@@ -6,7 +6,7 @@ class temp(object):
 
 import logging
 from pyrogram.errors import UserNotParticipant
-from db.broadcast_sql import check_join_request
+from mfinder.db.broadcast_sql import check_join_request
 
 # Initialize logger
 logger = logging.getLogger(__name__)
