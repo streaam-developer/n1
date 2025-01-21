@@ -43,76 +43,44 @@ from mfinder import LOGGER
 from pyrogram import Client, filters, enums
 from mfinder import *
 from mfinder.utils.utils import temp, is_subscribed
-@Client.on_message(~filters.regex(r"^\/") & filters.text & filters.private & filters.incoming)
+# Handle private messages
+@Client.on_message(~filters.regex(r"^/") & filters.text & filters.private & filters.incoming)
 async def filter_(bot, message):
     user_id = message.from_user.id
 
-    # Skip if the message contains a command or special characters
-    if re.findall("((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
+    # Skip commands or special characters
+    if re.findall(r"((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
         return
 
-    # Check if the user is banned
+    # Check if user is banned
     if await is_banned(user_id):
         await message.reply_text("You are banned. You can't use this bot.", quote=True)
         return
 
-    # Check subscription for all channels in FSUB_CHANNELS
-    unjoined_channels = []  # To store channels that are not yet joined
-    invite_links = []
-
-    invite_link = AUTH_LINK
+    # Check subscription
+    unjoined_channels = []
     for channel_id in FSUB_CHANNELS:
-        if not await is_subscribed(bot, message, [channel_id], invite_link):
-            # If user is not subscribed, create an invite link and add to unjoined channels
-            try:
-                invite_link = AUTH_LINK
-                unjoined_channels.append(channel_id)
-            except ChatAdminRequired:
-                logger.error(f"Make sure Bot is admin in channel: {channel_id}")
-                return
-    
-    # If user is not subscribed to any channel, show invite buttons
-    if unjoined_channels and ASKFSUBINGRP:
-        btn = []
-        # Add buttons for only unjoined channels
-        for idx, invite_link in enumerate(invite_links):
-            btn.append([InlineKeyboardButton(f"Jᴏɪɴ Uᴘᴅᴀᴛᴇ Cʜᴀɴɴᴇʟ {idx + 1} ♂️", url=invite_link)])
-            
-        # Add "I'm Subscribed" button only if there are unjoined channels
-        btn.append([InlineKeyboardButton("I'm Subscribed ✅", callback_data=f"groupchecksub")])
-        
-        # Send the subscribe message with user mention
-        subscribe_message = await message.reply(
-            f"🔰 ʜᴇʏ <u><b>{message.from_user.mention}🙋</b></u>,\n\n‣<u><b> ENG:-</b></u> Pʟᴇᴀsᴇ <u>sᴜʙsᴄʀɪʙᴇ</u> ᴀʟʟ ᴄʜᴀɴɴᴇʟs ᴛᴏ ʀᴇǫᴜᴇsᴛ ɪɴ ɢʀᴏᴜᴘ.\nᴛʜᴇɴ ᴄʟɪᴄᴋ ᴏɴ 𝗶'𝗺 𝘀𝘂𝗯𝘀𝗰𝗿𝗶𝗯𝗲𝗱 ʙᴜᴛᴛᴏɴ.\n‣<u><b> हिंदी:-</b></u> ग्रुप में फाइल रिक्वेस्ट करने के लिए, कृपया हमारे अपडेट चैनल को जाईन कीजिए।\n‣<b><u> Tʀᴀɴsʟᴀᴛᴇ Tʜɪs Mᴇssᴀɢᴇ ɪɴ :-</u>\n  <a href='https://telegra.ph/Force-subscribe-in-Tamil-09-16'>தமிழ்</a> || <a href='https://telegra.ph/Force-subscribe-in-Telugu-09-16'>తెలుగు</a> || <a href='https://telegra.ph/Force-subscribe-in-Malayalam-09-16'>മലയാളം</a> ||</b>",
+        if not await is_subscribed(bot, message, channel_id, AUTH_LINK):
+            unjoined_channels.append(channel_id)
+
+    if unjoined_channels:
+        btn = [[InlineKeyboardButton("Join Channel", url=AUTH_LINK)]]
+        btn.append([InlineKeyboardButton("I'm Subscribed ✅", callback_data="check_subscription")])
+        subscribe_message = await message.reply_text(
+            "Please join all required channels to use this bot.",
             reply_markup=InlineKeyboardMarkup(btn),
             disable_web_page_preview=True,
-            parse_mode=enums.ParseMode.HTML
-        )        
-        temp.DEL_MSG[message.from_user.id] = subscribe_message
-
-        try:
-            await asyncio.sleep(60)
-            await message.delete()
-        except Exception as e:
-            logger.error(f"Failed to delete message: {e}")
-            
-        try:
-            await subscribe_message.delete()
-        except Exception as e:
-            logger.error(f"Failed to delete subscribe message: {e}")
-
+        )
+        temp.DEL_MSG[user_id] = subscribe_message
         return
-     
-    # Check if the message matches any filter
+
+    # Check for filters
     fltr = await is_filter(message.text)
     if fltr:
-        await message.reply_text(
-            text=fltr.message,
-            quote=True,
-        )
+        await message.reply_text(text=fltr.message, quote=True)
         return
 
-    # Proceed with searching after joining the channel
+    # Proceed with search
     if 2 < len(message.text) < 100:
         search = message.text
         page_no = 1
@@ -121,91 +89,47 @@ async def filter_(bot, message):
         result, btn = await get_result(search, page_no, user_id, username)
 
         if result:
-            if btn:
-                await message.reply_text(
-                    f"{result}",
-                    reply_markup=InlineKeyboardMarkup(btn),
-                    quote=True,
-                )
-            else:
-                await message.reply_text(
-                    f"{result}",
-                    quote=True,
-                )
+            await message.reply_text(result, reply_markup=InlineKeyboardMarkup(btn) if btn else None, quote=True)
         else:
-            await message.reply_text(
-                text="No results found.\nOr retry with the correct spelling 🤐",
-                quote=True,
-            )
+            await message.reply_text("No results found. Try again with a different query.", quote=True)
 
 
-@Client.on_message(filters.group & ~filters.regex(r"^\/") & filters.text & filters.incoming)
+# Handle group messages
+@Client.on_message(filters.group & ~filters.regex(r"^/") & filters.text & filters.incoming)
 async def group_filter_(bot, message):
     user_id = message.from_user.id
     group_id = message.chat.id
 
-    # Skip if the message contains a command or special characters
-    if re.findall("((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
+    # Skip commands or special characters
+    if re.findall(r"((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
         return
 
-    # Check if the user is banned
+    # Check if user is banned
     if await is_banned(user_id):
         await message.reply_text("You are banned from using this bot.", quote=True)
         return
 
-    # Check subscription for all channels in FSUB_CHANNELS
-    unjoined_channels = []  # To store channels that are not yet joined
-    invite_links = []
-    invite_link = AUTH_LINK
+    # Check subscription
+    unjoined_channels = []
     for channel_id in FSUB_CHANNELS:
-        if not await is_subscribed(bot, message, [channel_id], invite_link):
-            # If user is not subscribed, create an invite link and add to unjoined channels
-            try:
-                invite_link = AUTH_LINK
-                unjoined_channels.append(channel_id)
-            except ChatAdminRequired:
-                logger.error(f"Make sure Bot is admin in channel: {channel_id}")
-                return
-    
-    # If user is not subscribed to any channel, show invite buttons
+        if not await is_subscribed(bot, message, channel_id, AUTH_LINK):
+            unjoined_channels.append(channel_id)
+
     if unjoined_channels and ASKFSUBINGRP:
-        btn = []
-        # Add buttons for only unjoined channels
-        for idx, invite_link in enumerate(invite_links):
-            btn.append([InlineKeyboardButton(f"Jᴏɪɴ Uᴘᴅᴀᴛᴇ Cʜᴀɴɴᴇʟ {idx + 1} ♂️", url=invite_link)])
-            
-        # Add "I'm Subscribed" button only if there are unjoined channels
-        btn.append([InlineKeyboardButton("I'm Subscribed ✅", callback_data=f"groupchecksub")])
-        
-        # Send the subscribe message with user mention
-        subscribe_message = await message.reply(
-            f"🔰 ʜᴇʏ <u><b>{message.from_user.mention}🙋</b></u>,\n\n‣<u><b> ENG:-</b></u> Pʟᴇᴀsᴇ <u>sᴜʙsᴄʀɪʙᴇ</u> ᴀʟʟ ᴄʜᴀɴɴᴇʟs ᴛᴏ ʀᴇǫᴜᴇsᴛ ɪɴ ɢʀᴏᴜᴘ.\nᴛʜᴇɴ ᴄʟɪᴄᴋ ᴏɴ 𝗶'𝗺 𝘀𝘂𝗯𝘀𝗰𝗿𝗶𝗯𝗲𝗱 ʙᴜᴛᴛᴏɴ.\n‣<u><b> हिंदी:-</b></u> ग्रुप में फाइल रिक्वेस्ट करने के लिए, कृपया हमारे अपडेट चैनल को जाईन कीजिए।\n‣<b><u> Tʀᴀɴsʟᴀᴛᴇ Tʜɪs Mᴇssᴀɢᴇ ɪɴ :-</u>\n  <a href='https://telegra.ph/Force-subscribe-in-Tamil-09-16'>தமிழ்</a> || <a href='https://telegra.ph/Force-subscribe-in-Telugu-09-16'>తెలుగు</a> || <a href='https://telegra.ph/Force-subscribe-in-Malayalam-09-16'>മലയാളം</a> ||</b>",
+        btn = [[InlineKeyboardButton("Join Channel", url=AUTH_LINK)]]
+        btn.append([InlineKeyboardButton("I'm Subscribed ✅", callback_data="groupchecksub")])
+        subscribe_message = await message.reply_text(
+            f"Hey {message.from_user.mention}, please join all required channels to request in the group.",
             reply_markup=InlineKeyboardMarkup(btn),
             disable_web_page_preview=True,
-            parse_mode=enums.ParseMode.HTML
-        )        
-        temp.DEL_MSG[message.from_user.id] = subscribe_message
-
-        try:
-            await asyncio.sleep(60)
-            await message.delete()
-        except Exception as e:
-            logger.error(f"Failed to delete message: {e}")
-            
-        try:
-            await subscribe_message.delete()
-        except Exception as e:
-            logger.error(f"Failed to delete subscribe message: {e}")
-
+        )
+        temp.DEL_MSG[user_id] = subscribe_message
         return
-     
-    # Check if the message matches any filter
+
+    # Check for filters
     fltr = await is_filter(message.text)
     if fltr:
-        await message.reply_text(
-            text=fltr.message,
-            quote=True,
-        )
+        await message.reply_text(text=fltr.message, quote=True)
         return
 
     # Proceed with searching after joining the channel

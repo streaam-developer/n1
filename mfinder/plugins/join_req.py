@@ -6,20 +6,27 @@ from mfinder import ADMINS, SECOND_AUTH_CHANNEL, THIRD_AUTH_CHANNEL, AUTH_LINK
 from mfinder.utils.utils import *
 FSUB_CHANNELS = [THIRD_AUTH_CHANNEL]
 
-@Client.on_chat_join_request(filters.group | filters.channel)
-async def autoapprove(client: Client, message: ChatJoinRequest):
-    user = message.from_user
-    all_joined = True
+from pyrogram.errors import UserNotParticipant, ChatAdminRequired
+# Check if a user is subscribed to a channel
+async def is_subscribed(bot, message, channel_id, invite_link):
+    """
+    Check if a user is subscribed to a private channel.
+    """
+    try:
+        user = await bot.get_chat_member(channel_id, message.from_user.id)
+        if user.status in ["member", "administrator", "creator"]:
+            return True
+    except UserNotParticipant:
+        return False
+    except ChatAdminRequired:
+        logger.error(f"Bot must be admin in channel: {channel_id}")
+        raise
+    except Exception as e:
+        logger.error(f"Error checking subscription for channel {channel_id}: {e}")
+        raise
+    return False
 
-    # Check membership for each channel in FSUB_CHANNELS
-    for channel_id in FSUB_CHANNELS:
-        if not await is_subscribed(client, message, channel_id, AUTH_LINK):
-            all_joined = False
-            break
 
-    # Approve the join request if subscribed to all channels
-    if all_joined:
-        await client.approve_chat_join_request(chat_id=message.chat.id, user_id=user.id)
 
 @Client.on_message(filters.command("delreq") & filters.private & filters.user(ADMINS))
 async def del_requests(client, message):
