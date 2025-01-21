@@ -60,8 +60,9 @@ async def filter_(bot, message):
     unjoined_channels = []  # To store channels that are not yet joined
     invite_links = []
 
+    invite_link = AUTH_LINK
     for channel_id in FSUB_CHANNELS:
-        if not await is_subscribed(bot, message, [channel_id]):
+        if not await is_subscribed(bot, message, [channel_id], invite_link):
             # If user is not subscribed, create an invite link and add to unjoined channels
             try:
                 invite_link = AUTH_LINK
@@ -155,9 +156,9 @@ async def group_filter_(bot, message):
     # Check subscription for all channels in FSUB_CHANNELS
     unjoined_channels = []  # To store channels that are not yet joined
     invite_links = []
-
+    invite_link = AUTH_LINK
     for channel_id in FSUB_CHANNELS:
-        if not await is_subscribed(bot, message, [channel_id]):
+        if not await is_subscribed(bot, message, [channel_id], invite_link):
             # If user is not subscribed, create an invite link and add to unjoined channels
             try:
                 invite_link = AUTH_LINK
