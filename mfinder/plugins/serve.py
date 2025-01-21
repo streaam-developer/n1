@@ -60,22 +60,24 @@ async def filter_(bot, message):
         await message.reply_text("You are banned. You can't use this bot.", quote=True)
         return
 
-    # Check subscription
     unjoined_channels = []
+
     for channel_id in FSUB_CHANNELS:
-        if not await is_subscribed(bot, message, channel_id, AUTH_LINK):
+        if not await is_subscribed(bot, message, channel_id):
             unjoined_channels.append(channel_id)
 
     if unjoined_channels:
-        btn = [[InlineKeyboardButton("Join Channel", url=AUTH_LINK)]]
-        btn.append([InlineKeyboardButton("I'm Subscribed ✅", callback_data="check_subscription")])
-        subscribe_message = await message.reply_text(
-            "Please join all required channels to use this bot.",
-            reply_markup=InlineKeyboardMarkup(btn),
-            disable_web_page_preview=True,
+        await message.reply_text(
+            "Please join the required channels to use this bot.",
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [InlineKeyboardButton("Join Channel", url=AUTH_LINK)],
+                    [InlineKeyboardButton("I'm Subscribed ✅", callback_data="check_subscription")],
+                ]
+            ),
         )
-        temp.DEL_MSG[user_id] = subscribe_message
         return
+
 
     # Check for filters
     fltr = await is_filter(message.text)
@@ -103,20 +105,21 @@ async def group_filter_(bot, message):
     user_id = message.from_user.id
     group_id = message.chat.id
 
-    if not isinstance(FSUB_CHANNELS, list):
-        raise ValueError("FSUB_CHANNELS must be a list of channel IDs.")
-
     unjoined_channels = []
+
     for channel_id in FSUB_CHANNELS:
-        if not await is_subscribed(bot, message, channel_id, AUTH_LINK):
+        if not await is_subscribed(bot, message, channel_id):
             unjoined_channels.append(channel_id)
 
     if unjoined_channels:
-        btn = [[InlineKeyboardButton("Join Channel", url=AUTH_LINK)]]
-        btn.append([InlineKeyboardButton("I'm Subscribed ✅", callback_data="groupchecksub")])
         await message.reply_text(
-            "Please join the required channels.",
-            reply_markup=InlineKeyboardMarkup(btn),
+            "Please join the required channels to use this bot.",
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [InlineKeyboardButton("Join Channel", url=AUTH_LINK)],
+                    [InlineKeyboardButton("I'm Subscribed ✅", callback_data="check_subscription")],
+                ]
+            ),
         )
         return
 

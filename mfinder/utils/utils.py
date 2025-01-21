@@ -30,9 +30,7 @@ async def is_subscribed(bot, message, channel_id):
             return True
         return False
     except UserNotParticipant:
-        # User is not a member of the channel
         return False
-    except RPCError as e:
-        # Handle unexpected errors
+    except Exception as e:
         print(f"Error checking subscription: {e}")
         return False
