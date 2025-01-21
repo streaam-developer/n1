@@ -1,21 +1,22 @@
 import threading
+import asyncio
 from sqlalchemy import create_engine, Column, String, Integer, Boolean, BigInteger
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import QueuePool
 from sqlalchemy.orm.exc import NoResultFound
-from mfinder import DB_URL, LOGGER
-from sqlalchemy import create_engine, Column, String, Integer, Boolean, BigInteger, Numeric
+from mfinder import DB_URL, LOGGER, OWNER_ID
+
 BASE = declarative_base()
 
 class AdminSettings(BASE):
     __tablename__ = "admin_settings"
-    setting_name = Column(String(255), primary_key=True)  # Specify length
+    setting_name = Column(String(255), primary_key=True)
     auto_delete = Column(Integer)
-    custom_caption = Column(String(255))  # Specify length
+    custom_caption = Column(String(255))
     fsub_channel = Column(Integer)
-    channel_link = Column(String(255))  # Specify length
-    caption_uname = Column(String(255))  # Specify length
+    channel_link = Column(String(255))
+    caption_uname = Column(String(255))
     repair_mode = Column(Boolean)
 
     def __init__(self, setting_name="default"):
@@ -32,7 +33,7 @@ class Settings(BASE):
     user_id = Column(BigInteger, primary_key=True)
     precise_mode = Column(Boolean, default=False)
     button_mode = Column(Boolean, default=False)
-    link_mode = Column(Boolean, default=True)  # Default `link_mode` to True
+    link_mode = Column(Boolean, default=True)
     list_mode = Column(Boolean, default=False)
 
     def __init__(self, user_id, precise_mode=False, button_mode=False, link_mode=True, list_mode=False):
@@ -51,14 +52,24 @@ def start() -> scoped_session:
 SESSION = start()
 INSERTION_LOCK = threading.RLock()
 
-OWNER_ID = 6597445442  # Replace this with the actual owner ID
+async def reconnect():
+    """Reconnect to the database every 5 minutes."""
+    while True:
+        try:
+            SESSION.remove()  # Remove the current session
+            global SESSION
+            SESSION = start()  # Recreate the session
+            LOGGER.info("Reconnected to the database.")
+        except Exception as e:
+            LOGGER.warning("Reconnection failed: %s", str(e))
+        
+        await asyncio.sleep(300)  # Wait for 5 minutes (300 seconds)
 
 async def get_search_settings(user_id):
     try:
         with INSERTION_LOCK:
             settings = SESSION.query(Settings).filter_by(user_id=OWNER_ID).first()
             if not settings:
-                # Fetch the owner's settings if user-specific settings do not exist
                 settings = SESSION.query(Settings).filter_by(user_id=OWNER_ID).first()
             return settings
     except Exception as e:
@@ -69,7 +80,6 @@ async def change_search_settings(user_id, precise_mode=None, button_mode=None, l
     try:
         with INSERTION_LOCK:
             if user_id == OWNER_ID:
-                # Owner updates settings for all users
                 settings_list = SESSION.query(Settings).all()
                 for settings in settings_list:
                     if precise_mode is not None:
@@ -82,7 +92,6 @@ async def change_search_settings(user_id, precise_mode=None, button_mode=None, l
                         settings.list_mode = list_mode
                 SESSION.commit()
             else:
-                # Regular user updates their settings
                 settings = SESSION.query(Settings).filter_by(user_id=OWNER_ID).first()
                 if settings:
                     if precise_mode is not None:
