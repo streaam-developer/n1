@@ -1,13 +1,12 @@
 import uvloop
-import os
-import sys
-import time
 import asyncio
 from pyrogram import Client, idle, __version__
 from pyrogram.raw.all import layer
 from mfinder import APP_ID, API_HASH, BOT_TOKEN, OWNER_ID
 
 uvloop.install()
+
+ # Replace with your actual Telegram user ID
 
 async def send_restart_message(app):
     """
@@ -20,11 +19,12 @@ async def send_restart_message(app):
 
 async def restart_bot(app):
     """
-    Function to restart the bot by re-running the script and sending a restart message.
+    Function to restart the bot by stopping and starting the app instance.
     """
+    await app.stop()  # Stop the current instance
+    print("Bot is restarting...")
+    await app.start()  # Start the instance again
     await send_restart_message(app)
-    print("Restarting the bot...")
-    os.execv(sys.executable, ['python'] + sys.argv)
 
 async def schedule_restart(interval_minutes, app):
     """
@@ -32,7 +32,6 @@ async def schedule_restart(interval_minutes, app):
     """
     while True:
         await asyncio.sleep(interval_minutes * 60)  # Convert minutes to seconds
-        await app.stop()
         await restart_bot(app)
 
 async def main():
@@ -52,7 +51,7 @@ async def main():
         )
 
         # Start the restart scheduler
-        asyncio.create_task(schedule_restart(1, app))
+        asyncio.create_task(schedule_restart(1, app))  # Restart every 60 minutes
 
         await idle()
         print(f"{me.first_name} - @{me.username} - Stopped !!!")
