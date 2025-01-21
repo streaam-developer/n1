@@ -43,6 +43,9 @@ from mfinder import LOGGER
 from pyrogram import Client, filters, enums
 from mfinder import *
 from mfinder.utils.utils import temp, is_subscribed
+
+FSUB_CHANNELS = [-1002399909983]
+
 # Handle private messages
 @Client.on_message(~filters.regex(r"^/") & filters.text & filters.private & filters.incoming)
 async def filter_(bot, message):
@@ -100,31 +103,23 @@ async def group_filter_(bot, message):
     user_id = message.from_user.id
     group_id = message.chat.id
 
-    # Skip commands or special characters
-    if re.findall(r"((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
-        return
+    if not isinstance(FSUB_CHANNELS, list):
+        raise ValueError("FSUB_CHANNELS must be a list of channel IDs.")
 
-    # Check if the user is banned
-    if await is_banned(user_id):
-        await message.reply_text("You are banned from using this bot.", quote=True)
-        return
-
-    # Check subscription for all channels
     unjoined_channels = []
     for channel_id in FSUB_CHANNELS:
-        if not await is_subscribed(bot, message, channel_id, AUTH_LINK):  # Pass the message object correctly
+        if not await is_subscribed(bot, message, channel_id, AUTH_LINK):
             unjoined_channels.append(channel_id)
 
-    if unjoined_channels and ASKFSUBINGRP:
+    if unjoined_channels:
         btn = [[InlineKeyboardButton("Join Channel", url=AUTH_LINK)]]
         btn.append([InlineKeyboardButton("I'm Subscribed ✅", callback_data="groupchecksub")])
-        subscribe_message = await message.reply_text(
-            "Please join all required channels to use this bot.",
+        await message.reply_text(
+            "Please join the required channels.",
             reply_markup=InlineKeyboardMarkup(btn),
-            disable_web_page_preview=True,
         )
-        temp.DEL_MSG[user_id] = subscribe_message
         return
+
 
     # Check for filters
     fltr = await is_filter(message.text)

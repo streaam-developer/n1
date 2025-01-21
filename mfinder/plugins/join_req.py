@@ -4,7 +4,7 @@ from mfinder.db.broadcast_sql import check_join_request, add_join_request, delet
 from mfinder import ADMINS, SECOND_AUTH_CHANNEL, THIRD_AUTH_CHANNEL, AUTH_LINK
 
 from mfinder.utils.utils import *
-FSUB_CHANNELS = [THIRD_AUTH_CHANNEL]
+FSUB_CHANNELS = [-1002399909983]
 
 # Updated join_req.py with improved join request handling
 from pyrogram import Client, filters
@@ -29,14 +29,19 @@ async def is_pending_approval(bot, user_id, chat_id):
         member = await bot.get_chat_member(chat_id, user_id)
         if member.status == "restricted" and not member.is_member:
             return True
+    except UserNotParticipant:
+        return False  # User not in the channel
     except RPCError as e:
         print(f"Error checking pending approval: {e}")
+        return False
     return False
 
 # Fetch pending join requests for a channel
 async def search_pending_requests(bot, chat_id, user_id=None):
     try:
-        requests = await bot.get_chat_join_requests(chat_id)
+        requests = []
+        async for req in bot.get_chat_join_requests(chat_id):  # Use async for to iterate
+            requests.append(req)
         if user_id:
             for req in requests:
                 if req.from_user.id == user_id:
