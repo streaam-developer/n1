@@ -43,19 +43,33 @@ async def start(bot, update: Message):
     # Check the verification status of the user
     verify_status = await get_verify_status(user_id)
     
+    # Check if the user is coming for the first time and send a normal start message
+    if not verify_status:
+        start_msg = START_MSG.format(name, user_id)
+        await bot.send_message(
+            chat_id=update.chat.id,
+            text=start_msg,
+            reply_to_message_id=update.reply_to_message_id,
+            reply_markup=START_KB,
+        )
+        return  # Stop further processing for new users
+
     # Handle expired verification
     if verify_status['is_verified'] and VERIFY_EXPIRE < (time.time() - verify_status['verified_time']):
         await update_verify_status(user_id, is_verified=False)
-    
+
     # Token verification process
     if "verify_" in update.text:
         _, token = update.text.split("_", 1)
+        
+        # Check if token matches
         if verify_status['verify_token'] != token:
             return await bot.send_message(
                 chat_id=update.chat.id,
                 text="Your token is invalid or expired. Try again by clicking /start"
             )
-        
+
+        # If valid token, update verification status
         await update_verify_status(user_id, is_verified=True, verified_time=time.time())
         reply_markup = None if verify_status["link"] == "" else None
         await bot.send_message(
@@ -66,7 +80,7 @@ async def start(bot, update: Message):
         )
 
     elif verify_status['is_verified']:
-        # Send a welcome message if the user is verified
+        # If user is verified, send a welcome message and provide files
         reply_markup = InlineKeyboardMarkup(
             [[InlineKeyboardButton("About Me", callback_data="about"),
               InlineKeyboardButton("Close", callback_data="close")]]
@@ -77,13 +91,18 @@ async def start(bot, update: Message):
             reply_markup=reply_markup,
             disable_web_page_preview=True
         )
-         
+        # Logic to automatically provide files if verified can be added here
+        await get_files(bot, update)  # Assuming get_files is your function to provide files
+
     else:
-        # If the user is not verified, provide a verification link
+        # If user is not verified, provide a verification link
         if IS_VERIFY and not verify_status['is_verified']:
             bot.username = BOTUSERNAME
             token = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+            
+            # Remove old verification token and update the new one
             await update_verify_status(user_id, verify_token=token, link="")
+
             link = await get_shortlink(SHORTLINK_URL, SHORTLINK_API, f'https://telegram.dog/{bot.username}?start=verify_{token}')
             btn = [
                 [InlineKeyboardButton("Click here to verify", url=link)],
@@ -95,20 +114,6 @@ async def start(bot, update: Message):
                 reply_markup=InlineKeyboardMarkup(btn),
                 protect_content=False
             )
-
-    # Send the starting message with button
-    try:
-        start_msg = START_MSG.format(name, user_id)
-    except Exception as e:
-        LOGGER.warning(e)
-        start_msg = STARTMSG.format(name, user_id)
-
-    await bot.send_message(
-        chat_id=update.chat.id,
-        text=start_msg,
-        reply_to_message_id=update.reply_to_message_id,
-        reply_markup=START_KB,
-    )
 
     # Ensure search settings for the user
     search_settings = await get_search_settings(user_id)
