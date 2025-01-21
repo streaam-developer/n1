@@ -6,20 +6,13 @@ async def get_verify_status(user_id):
     verify = await db_verify_status(user_id)
     return verify
 
-async def update_verify_status(user_id, verify_token="", is_verified=False, verified_time=0, link="", expiry_duration=3600):
+async def update_verify_status(user_id, verify_token="", is_verified=False, verified_time=0, link=""):
     current = await db_verify_status(user_id)
     current['verify_token'] = verify_token
     current['is_verified'] = is_verified
     current['verified_time'] = verified_time
     current['link'] = link
-    current['expiry_time'] = int(datetime.utcnow().timestamp()) + expiry_duration  # Set expiry time
     await db_update_verify_status(user_id, current)
-
-async def validate_token(user_id, token):
-    is_valid = await is_token_valid(user_id, token)
-    if not is_valid:
-        return "Token expired or invalid"
-    return "Token is valid"
 
 async def get_shortlink(url, api, link):
     shortzy = Shortzy(api_key=api, base_site=url)

@@ -8,8 +8,6 @@ from sqlalchemy.exc import IntegrityError
 # SQLAlchemy base and table definition
 Base = declarative_base()
 
-from datetime import datetime, timedelta
-
 class Verify(Base):
     __tablename__ = 'verify'
 
@@ -18,19 +16,6 @@ class Verify(Base):
     verified_time = Column(BigInteger, default=0)
     verify_token = Column(String(255), default='')
     link = Column(String(255), default='')
-    expiry_time = Column(BigInteger, default=0)  # Add this column
-
-# Token validation function
-async def is_token_valid(user_id, token):
-    session = Session()
-    try:
-        verify_entry = session.query(Verify).filter_by(user_id=user_id).one_or_none()
-        if verify_entry and verify_entry.verify_token == token:
-            current_time = int(datetime.utcnow().timestamp())
-            return current_time <= verify_entry.expiry_time  # Check token expiry
-        return False
-    finally:
-        session.close()
 
 # Database connection setup
 engine = create_engine(DB_URL, poolclass=QueuePool)
