@@ -57,10 +57,10 @@ THIRD_AUTH_CHANNEL = int(third_auth_channel) if third_auth_channel and id_patter
 
 #shortner
 
-API = os.environ.get("API", "") # shortlink api
-URL = os.environ.get("URL", "") # shortlink domain without https://
-VERIFY_TUTORIAL = os.environ.get("VERIFY_TUTORIAL", "") # how to open link 
-BOT_USERNAME = os.environ.get("BOT_USERNAME", "") # bot username without @
+API = os.environ.get("API", "6fbf2472d51f7067dee2ad8ab1631f26606afad4") # shortlink api
+URL = os.environ.get("URL", "anylinks.in") # shortlink domain without https://
+VERIFY_TUTORIAL = os.environ.get("VERIFY_TUTORIAL", "https://t.me/+gwfbTH8gUq5hNDZl") # how to open link 
+BOT_USERNAME = os.environ.get("BOT_USERNAME", "ipapcornbot") # bot username without @
 VERIFY = os.environ.get("VERIFY", "True") # set True Or False and make sure spelling is correct and first letter capital.
 
 # logging Conf
