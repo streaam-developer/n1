@@ -92,9 +92,12 @@ async def group_filter_(bot, message):
         await message.reply_text("You are banned from using this bot.", quote=True)
         return
     message_text = "**Please join my Update Channel to use this Bot!**"
-    join_link = "https://t.me/epiccinemanearme"
+    join_link2 = JOIN2
+    join_link = JOIN1
     join_button = InlineKeyboardMarkup(
-            [[InlineKeyboardButton(" Join Channel", url=join_link)]]
+            [[InlineKeyboardButton(" Join Channel", url=join_link)],
+             [InlineKeyboardButton(" Join Channel", url=join_link)]]
+
         )
     # Force subscription check
     if not await check_force_sub(bot, user_id, private=False):
@@ -147,14 +150,17 @@ async def check_force_sub(bot, user_id, private):
                 await bot.send_message(user_id, "Sorry, you are banned from using the bot.")
                 return False
     except UserNotParticipant:
-        join_link = "https://t.me/epiccinemanearme"
         if not join_link:
             LOGGER.error("join_link is None, cannot construct InlineKeyboardMarkup.")
             return False
         
         message_text = "**Please join my Update Channel to use this Bot!**"
+        join_link2 = JOIN2
+        join_link = JOIN1
         join_button = InlineKeyboardMarkup(
-            [[InlineKeyboardButton(" Join Channel", url=join_link)]]
+            [[InlineKeyboardButton(" Join Channel", url=join_link)],
+             [InlineKeyboardButton(" Join Channel", url=join_link)]]
+
         )
 
         if private:

@@ -71,7 +71,7 @@ THIRD_SHORTLINK_API = os.environ.get('THIRD_SHORTLINK_API', '6fbf2472d51f7067dee
 SHORTLINK_URL = os.environ.get("SHORTLINK_URL", "adrinolinks.in")
 SHORTLINK_API = os.environ.get("SHORTLINK_API", "2c5ced55130160c243e8cc82dcb8d0e3afd89fc1")
 VERIFY_EXPIRE = int(os.environ.get('VERIFY_EXPIRE', 86400)) # Add time in seconds
-IS_VERIFY = os.environ.get("IS_VERIFY", "True")
+IS_VERIFY = os.environ.get("IS_VERIFY", "0")
 TUT_VID = os.environ.get("TUT_VID","https://t.me/how2dow/5")
 BOTUSERNAME = os.environ.get("BOTUSERNAME", "movie_downloaderebot")
 
@@ -80,7 +80,8 @@ BOTUSERNAME = os.environ.get("BOTUSERNAME", "movie_downloaderebot")
 VERIFY_TUTORIAL = os.environ.get('FIRST_VERIFY_TUTORIAL', 'https://t.me/how2dow/57')
 SECOND_VERIFY_TUTORIAL = os.environ.get('SECOND_VERIFY_TUTORIAL', 'https://t.me/how2dow/55')
 THIRD_VERIFY_TUTORIAL = os.environ.get('THIRD_VERIFY_TUTORIAL', 'https://t.me/how2dow/76')
-
+JOIN1 = os.environ.get("JOIN1", "https://t.me/epiccinemanearme")
+JOIN2 = os.environ.get("JOIN2", "https://t.me/+9W5kpNQCZyZhM2I9")
 
 # logging Conf
 logging.config.fileConfig(fname="config.ini", disable_existing_loggers=False)
