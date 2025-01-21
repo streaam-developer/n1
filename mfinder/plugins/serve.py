@@ -112,7 +112,7 @@ async def group_filter_(bot, message):
     # Check subscription for all channels
     unjoined_channels = []
     for channel_id in FSUB_CHANNELS:
-        if not await is_subscribed(bot, message, channel_id, AUTH_LINK):
+        if not await is_subscribed(bot, message, channel_id, AUTH_LINK):  # Pass the message object correctly
             unjoined_channels.append(channel_id)
 
     if unjoined_channels and ASKFSUBINGRP:
@@ -131,7 +131,6 @@ async def group_filter_(bot, message):
     if fltr:
         await message.reply_text(text=fltr.message, quote=True)
         return
-
 
     # Proceed with searching after joining the channel
     if 2 < len(message.text) < 100:

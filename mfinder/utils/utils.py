@@ -13,26 +13,32 @@ from mfinder import *
 logger = logging.getLogger(__name__)
 
 from pyrogram.errors import UserNotParticipant
+from pyrogram.errors import UserNotParticipant, ChatAdminRequired
 
 async def is_subscribed(bot, query, channel_id, invite_link):
     """
-    Check if a user is subscribed to the given channel.
-    If not subscribed, send the invite link.
+    Check if a user is subscribed to a private channel or group.
     """
-    invite_link = AUTH_LINK
     try:
         # Check if the user is a member of the channel
         user = await bot.get_chat_member(channel_id, query.from_user.id)
         if user.status in ["member", "administrator", "creator"]:
-            return True  # User is subscribed
+            return True
     except UserNotParticipant:
-        # User is not a participant, send the invite link
-        await query.message.reply_text(
-            f"Please join this channel to continue: [Join Here]({invite_link})",
+        # User is not subscribed
+        await query.reply_text(  # Correctly use query.reply_text
+            f"Please join the private channel using this link: [Join Here]({invite_link})",
             disable_web_page_preview=True,
         )
         return False
+    except ChatAdminRequired:
+        # Bot lacks admin privileges
+        logger.error(f"Bot must be an admin in channel: {channel_id}")
+        raise
     except Exception as e:
-        # Handle any other exceptions
-        print(f"Error checking subscription: {e}")
-        return False
+        # Log other exceptions
+        logger.error(f"Error checking subscription for channel {channel_id}: {e}")
+        raise
+
+    return False
+
