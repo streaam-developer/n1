@@ -38,7 +38,7 @@ async def reconnect():
         except Exception as e:
             LOGGER.warning("Reconnection failed: %s", str(e))
         
-        await asyncio.sleep(300)  # Wait for 5 minutes (300 seconds)
+        await asyncio.sleep(10)  # Wait for 5 minutes (300 seconds)
 
 async def add_filter(filters, message):
     with INSERTION_LOCK:

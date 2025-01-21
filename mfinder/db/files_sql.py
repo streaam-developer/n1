@@ -50,7 +50,7 @@ async def reconnect():
         except Exception as e:
             LOGGER.warning("Reconnection failed: %s", str(e))
         
-        await asyncio.sleep(300)  # Wait for 5 minutes (300 seconds)
+        await asyncio.sleep(10)  # Wait for 5 minutes (300 seconds)
 
 def clean_file_name(file_name):
     file_name = re.sub(r'\b\w+@\w+\.\w+\b', '', file_name)
