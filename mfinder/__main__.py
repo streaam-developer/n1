@@ -1,42 +1,47 @@
 import uvloop
 import asyncio
-from pyrogram import Client, idle, __version__
+from pyrogram import Client, idle, __version__, filters
 from pyrogram.raw.all import layer
-from mfinder import APP_ID, API_HASH, BOT_TOKEN, OWNER_ID
+from mfinder import APP_ID, API_HASH, BOT_TOKEN, OWNER_ID, ADMINS
 import os
+import sys
+import logging
+
+# Setup logger
+LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 uvloop.install()
+
+# Manual Restart Command
+@Client.on_message(filters.command(["restart"]) & filters.user(ADMINS))
+async def restart(bot, update):
+    LOGGER.warning("Restarting bot using /restart command")
+    msg = await update.reply_text(text="__Restarting.....__")
+    await asyncio.sleep(5)
+    await msg.edit("__Bot restarted!__")
+    os.execv(sys.executable, ["python3", "-m", "mfinder"] + sys.argv)
+
+
+async def schedule_restart(interval_minutes):
+    """
+    Schedule automatic bot restarts every `interval_minutes` minutes.
+    """
+    while True:
+        await asyncio.sleep(interval_minutes * 60)  # Wait for the interval
+        LOGGER.info(f"Restarting bot automatically after {interval_minutes} minute(s)")
+        os.execv(sys.executable, ["python3", "-m", "mfinder"] + sys.argv)
 
 
 async def send_restart_message(app):
     """
-    Function to send a message to the owner indicating a successful restart.
+    Notify the owner after a successful restart.
     """
     try:
-        await app.send_message(chat_id=OWNER_ID, text="Bot is restarting...")
+        await app.send_message(chat_id=OWNER_ID, text="Bot has restarted successfully.")
+        LOGGER.info("Restart message sent to the owner.")
     except Exception as e:
-        print(f"Failed to send restart message: {e}")
-
-
-async def restart_bot(app):
-    """
-    Restart the bot without closing the terminal.
-    """
-    print("Restarting the bot...")
-    await send_restart_message(app)
-    await app.stop()  # Stop the current bot session
-    await asyncio.sleep(1)  # Give it a second before restarting
-    await app.start()  # Restart the bot session
-    print("Bot restarted successfully.")
-
-
-async def schedule_restart(interval_minutes, app):
-    """
-    Function to schedule the bot to restart at a given interval (in minutes).
-    """
-    while True:
-        await asyncio.sleep(interval_minutes * 60)  # Wait for the interval
-        await restart_bot(app)  # Restart the bot
+        LOGGER.error(f"Failed to send restart message: {e}")
 
 
 async def main():
@@ -51,15 +56,18 @@ async def main():
 
     async with app:
         me = await app.get_me()
-        print(
+        LOGGER.info(
             f"{me.first_name} - @{me.username} - Pyrogram v{__version__} (Layer {layer}) - Started..."
         )
 
-        # Start the restart scheduler
-        asyncio.create_task(schedule_restart(1, app))  # Restart every 1 minute
+        # Notify owner of a successful restart
+        await send_restart_message(app)
+
+        # Start the automatic restart scheduler
+        asyncio.create_task(schedule_restart(1))  # Restart every 1 minute
 
         await idle()
-        print(f"{me.first_name} - @{me.username} - Stopped !!!")
+        LOGGER.info(f"{me.first_name} - @{me.username} - Stopped!")
 
 
 if __name__ == "__main__":
