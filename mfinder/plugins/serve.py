@@ -40,7 +40,7 @@ async def filter_(bot, message):
         return
 
     # Force subscription check
-    if not await check_force_sub(bot, user_id):
+    if not await check_force_sub(bot, user_id, private=True):
         return
 
     # Check if the message matches any filter
@@ -93,7 +93,7 @@ async def group_filter_(bot, message):
         return
 
     # Force subscription check
-    if not await check_force_sub(bot, user_id):
+    if not await check_force_sub(bot, user_id, private=False):
         return
 
     # Check if the message matches any filter
@@ -131,7 +131,7 @@ async def group_filter_(bot, message):
                 quote=True,
             )
 
-async def check_force_sub(bot, user_id):
+async def check_force_sub(bot, user_id, private):
     try:
         force_sub = "-1002348104910"
         if force_sub:
@@ -143,19 +143,25 @@ async def check_force_sub(bot, user_id):
         join_link = "https://t.me/epiccinemanearme"
         if not join_link:
             LOGGER.error("join_link is None, cannot construct InlineKeyboardMarkup.")
-            await bot.send_message(
-                user_id,
-                "There is an issue retrieving the join link. Please contact support.",
-            )
             return False
         
-        await bot.send_message(
-            user_id,
-            "**Please join my Update Channel to use this Bot!**",
-            reply_markup=InlineKeyboardMarkup(
-                [[InlineKeyboardButton("🤖 Join Channel", url=join_link)]]
-            )
+        message_text = "**Please join my Update Channel to use this Bot!**"
+        join_button = InlineKeyboardMarkup(
+            [[InlineKeyboardButton(" Join Channel", url=join_link)]]
         )
+
+        if private:
+            await bot.send_message(
+                user_id,
+                message_text,
+                reply_markup=join_button
+            )
+        else:
+            await bot.send_message(
+                user_id,
+                message_text,
+                reply_markup=join_button
+            )
         return False
     except Exception as e:
         LOGGER.warning(f"Force subscription check failed: {e}")
