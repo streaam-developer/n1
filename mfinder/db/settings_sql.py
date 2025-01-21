@@ -7,6 +7,15 @@ from sqlalchemy.pool import QueuePool
 from sqlalchemy.orm.exc import NoResultFound
 from mfinder import DB_URL, LOGGER, OWNER_ID
 
+import threading
+import asyncio
+from sqlalchemy import create_engine, Column, String, Integer, Boolean, BigInteger
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.pool import QueuePool
+from sqlalchemy.orm.exc import NoResultFound
+from mfinder import DB_URL, LOGGER
+
 BASE = declarative_base()
 
 class AdminSettings(BASE):
@@ -69,9 +78,7 @@ async def get_search_settings(user_id):
     global SESSION  # Declare SESSION as global before using it
     try:
         with INSERTION_LOCK:
-            settings = SESSION.query(Settings).filter_by(user_id=OWNER_ID).first()
-            if not settings:
-                settings = SESSION.query(Settings).filter_by(user_id=OWNER_ID).first()
+            settings = SESSION.query(Settings).filter_by(user_id=user_id).first()
             return settings
     except Exception as e:
         LOGGER.warning("Error getting search settings: %s ", str(e))
@@ -94,7 +101,7 @@ async def change_search_settings(user_id, precise_mode=None, button_mode=None, l
                         settings.list_mode = list_mode
                 SESSION.commit()
             else:
-                settings = SESSION.query(Settings).filter_by(user_id=OWNER_ID).first()
+                settings = SESSION.query(Settings).filter_by(user_id=user_id).first()
                 if settings:
                     if precise_mode is not None:
                         settings.precise_mode = precise_mode
@@ -114,6 +121,7 @@ async def change_search_settings(user_id, precise_mode=None, button_mode=None, l
     except Exception as e:
         LOGGER.warning("Error changing search settings: %s ", str(e))
 
+# Other functions remain unchanged...
 # Other functions remain unchanged...
 
 async def set_repair_mode(repair_mode):
