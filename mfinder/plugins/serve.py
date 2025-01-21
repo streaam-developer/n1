@@ -24,7 +24,7 @@ from mfinder.db.settings_sql import (
 )
 from mfinder.db.ban_sql import is_banned
 from mfinder.db.filters_sql import is_filter
-from mfinder import LOGGER
+from mfinder import *
 
 @Client.on_message(~filters.regex(r"^\/") & filters.text & filters.private & filters.incoming)
 async def filter_(bot, message):
@@ -133,7 +133,7 @@ async def group_filter_(bot, message):
 
 async def check_force_sub(bot, user_id):
     try:
-        force_sub = await get_channel()
+        force_sub = AUTH_CHANNEL
         if force_sub:
             user = await bot.get_chat_member(int(force_sub), user_id)
             if user.status == ChatMemberStatus.BANNED:
