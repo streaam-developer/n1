@@ -47,8 +47,8 @@ JOINREQ_MSG = bool(os.environ.get('JOINREQ_MSG', False))
 
 auth_channel = os.environ.get('AUTH_CHANNEL', '-1002348104910')  # public channel 
 second_auth_channel = os.environ.get('SECOND_AUTH_CHANNEL', '-1002346388593')  # Add the second auth channel or Group (should private)
-third_auth_channel = os.environ.get('THIRD_AUTH_CHANNEL', '-1002399909983')  # Add the third auth channel or Group (should private)
-AUTH_LINK = os.environ.get('AUTH_LINK', 'https://t.me/+9W5kpNQCZyZhM2I9')
+third_auth_channel = os.environ.get('THIRD_AUTH_CHANNEL', '-1002348104910')  # Add the third auth channel or Group (should private)
+AUTH_LINK = os.environ.get('AUTH_LINK', 'https://t.me/+gwfbTH8gUq5hNDZl')
 
 AUTH_CHANNEL = int(auth_channel) if auth_channel and id_pattern.search(auth_channel) else None
 SECOND_AUTH_CHANNEL = int(second_auth_channel) if second_auth_channel and id_pattern.search(second_auth_channel) else None

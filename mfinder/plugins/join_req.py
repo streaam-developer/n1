@@ -4,7 +4,7 @@ from mfinder.db.broadcast_sql import check_join_request, add_join_request, delet
 from mfinder import ADMINS, SECOND_AUTH_CHANNEL, THIRD_AUTH_CHANNEL, AUTH_LINK
 
 from mfinder.utils.utils import *
-FSUB_CHANNELS = [-1002399909983]
+FSUB_CHANNELS = [-1002348104910]
 
 # Updated join_req.py with improved join request handling
 from pyrogram import Client, filters
