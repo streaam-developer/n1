@@ -68,20 +68,36 @@ async def count_users():
 
 from sqlalchemy.orm.exc import NoResultFound
 
-async def check_join_request(self, user_id, chat_id):
-    """
-    Check if the user has a join request in the database.
+async def add_join_request(user_id, chat_id):
+    """Add a join request to the database."""
+    with INSERTION_LOCK:
+        try:
+            # Check if the join request already exists
+            result = SESSION.query(Broadcast).filter_by(user_id=user_id, chat_id=chat_id).one_or_none()
+            if not result:
+                # Add a new join request
+                new_request = Broadcast(user_id=user_id, chat_id=chat_id)
+                SESSION.add(new_request)
+                SESSION.commit()
+        except Exception as e:
+            SESSION.rollback()
+            raise e
 
-    Args:
-        user_id (int): The ID of the user.
-        chat_id (int): The ID of the chat.
+async def check_join_request(user_id, chat_id):
+    """Check if a join request exists in the database."""
+    with INSERTION_LOCK:
+        try:
+            result = SESSION.query(Broadcast).filter_by(user_id=user_id, chat_id=chat_id).one_or_none()
+            return result is not None
+        except Exception as e:
+            raise e
 
-    Returns:
-        bool: True if a join request exists, False otherwise.
-    """
-    try:
-        # Query the database to check for a join request
-        result = self.session.query(self.JoinRequest).filter_by(user_id=user_id, chat_id=chat_id).one_or_none()
-        return result is not None  # True if a record exists, False otherwise
-    except NoResultFound:
-        return False
+async def delete_all_join_requests():
+    """Delete all join requests from the database."""
+    with INSERTION_LOCK:
+        try:
+            SESSION.query(Broadcast).delete()
+            SESSION.commit()
+        except Exception as e:
+            SESSION.rollback()
+            raise e
