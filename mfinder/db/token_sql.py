@@ -3,6 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
 from mfinder import *
 from sqlalchemy.pool import QueuePool
+from sqlalchemy.exc import IntegrityError
 
 # SQLAlchemy base and table definition
 Base = declarative_base()
@@ -47,12 +48,15 @@ async def db_update_verify_status(user_id, verify):
     session = Session()
     try:
         verify_entry = session.query(Verify).filter_by(user_id=user_id).one_or_none()
+        
+        # If the entry exists, update it
         if verify_entry:
             verify_entry.is_verified = verify['is_verified']
             verify_entry.verified_time = verify['verified_time']
             verify_entry.verify_token = verify['verify_token']
             verify_entry.link = verify['link']
         else:
+            # If no entry exists, create a new one
             new_entry = Verify(
                 user_id=user_id,
                 is_verified=verify['is_verified'],
@@ -61,7 +65,23 @@ async def db_update_verify_status(user_id, verify):
                 link=verify['link']
             )
             session.add(new_entry)
+
         session.commit()
+        
+    except IntegrityError as e:
+        # Handle unique constraint violation by updating the record instead
+        session.rollback()  # Rollback the transaction if an error occurs
+        if "Duplicate entry" in str(e):
+            # If a duplicate entry error occurs, try updating the existing record
+            session.query(Verify).filter_by(user_id=user_id).update({
+                'is_verified': verify['is_verified'],
+                'verified_time': verify['verified_time'],
+                'verify_token': verify['verify_token'],
+                'link': verify['link']
+            })
+            session.commit()
+        else:
+            raise e  # Raise the exception if it's not a duplicate error
     except Exception as e:
         session.rollback()
         raise e
