@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 from pyrogram.errors import UserNotParticipant
 from pyrogram.errors import UserNotParticipant, ChatAdminRequired
 from pyrogram.errors import UserNotParticipant, ChatAdminRequired
+from pyrogram.types import ChatJoinRequest
 
 async def is_subscribed(bot, query, channel_id, invite_link):
     """
