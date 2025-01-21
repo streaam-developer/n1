@@ -45,7 +45,7 @@ async def start(bot, update: Message):
     
     # Check if the user is coming for the first time and send a normal start message
     if not verify_status:
-        start_msg = START_MSG.format(name, user_id)
+        start_msg = STARTMSG.format(name, user_id)
         await bot.send_message(
             chat_id=update.chat.id,
             text=start_msg,
