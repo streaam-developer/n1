@@ -20,7 +20,7 @@ from mfinder.utils.util_support import *
 from mfinder.plugins.serve import get_files
 from mfinder.db.token_sql import *
 
-from mfinder import *
+
 
 from pyrogram.enums import ParseMode
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
@@ -29,60 +29,86 @@ from mfinder.utils.utils import *
 
 
 @Client.on_message(filters.command(["start"], prefixes="/"))
-async def start(bot, message: Message):
-    user_id = message.from_user.id
-    name = message.from_user.first_name or "User"
+async def start(bot, update: Message):
+    user_id = update.from_user.id
+    name = update.from_user.first_name or "User"
+    user_name = "@" + update.from_user.username if update.from_user.username else None
 
-    # Check if the bot was started with a parameter
-    start_params = message.text.split(" ", 1)  # Split command and its arguments
-    param = start_params[1] if len(start_params) > 1 else None
+    # Add user to the database if not already present
+    await add_user(user_id, user_name)
 
-    if IS_VERIFY and not await get_verify_status(user_id):
-        if param:  # Assuming `param` is the file_id
-            btn = [[
-                InlineKeyboardButton(
-                    "Vᴇʀɪғʏ",
-                    url=await get_token(bot, user_id, f"https://telegram.me/{temp.U_NAME}?start=", param)
-                ),
-                InlineKeyboardButton("Hᴏᴡ Tᴏ Vᴇʀɪғʏ", url=HOW_TO_VERIFY)
-            ]]
-            await message.reply_text(
-                text="<b>Yᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴠᴇʀɪғɪᴇᴅ!\nKɪɴᴅʟʏ ᴠᴇʀɪғʏ ᴛᴏ ᴄᴏɴᴛɪɴᴜᴇ Sᴏ ᴛʜᴀᴛ ʏᴏᴜ ᴄᴀɴ ɢᴇᴛ ᴀᴄᴄᴇss ᴛᴏ ᴜɴʟɪᴍɪᴛᴇᴅ ᴍᴏᴠɪᴇs ᴜɴᴛɪʟ 12 ʜᴏᴜʀs ғʀᴏᴍ ɴᴏᴡ!</b>",
-                protect_content=True if PROTECT_CONTENT else False,
-                reply_markup=InlineKeyboardMarkup(btn)
+    # Check if user started with a parameter
+    start_params = update.text.split(" ", 1)  # Split command and its arguments
+    if len(start_params) == 1:
+        # No parameters, send a basic welcome message
+        await bot.send_message(
+            chat_id=update.chat.id,
+            text=f"Hello {name}, welcome to the bot!",
+            reply_markup=START_KB,
+        )
+        return
+
+    # Extract parameter
+    param = start_params[1]
+
+    # Handle verification parameter
+    if param.startswith("verify_"):
+        token = param.split("verify_")[1]
+        verify_status = await get_verify_status(user_id)
+
+        if verify_status and verify_status['verify_token'] == token:
+            # Mark user as verified
+            await update_verify_status(user_id, is_verified=True, verify_token=None)
+
+            # Send success message and requested file
+            await bot.send_message(
+                chat_id=update.chat.id,
+                text=f"Thank you {name}, you are now verified! Here is your file:",
             )
+            await get_files(bot, update)
         else:
-            await message.reply_text(
-                text="You are not verified! Please use the /start command with a file code to proceed.",
-                protect_content=True if PROTECT_CONTENT else False
+            # Invalid or expired token
+            await bot.send_message(
+                chat_id=update.chat.id,
+                text="Invalid or expired verification link. Please restart to generate a new one.",
             )
         return
 
-    # If verification is disabled or the user is verified
-    if param:  # Assuming `param` is the file_id
-        f_caption = "Here is your requested file!"  # Adjust the caption as needed
-        await bot.send_cached_media(
-            chat_id=user_id,
-            file_id=param,
-            caption=f_caption,
-            protect_content=True if PROTECT_CONTENT else False,
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton("Sᴜᴘᴘᴏʀᴛ Gʀᴏᴜᴘ", url=GRP_LNK),
-                        InlineKeyboardButton("Uᴘᴅᴀᴛᴇs Cʜᴀɴɴᴇʟ", url=CHNL_LNK)
-                    ],
-                    [
-                        InlineKeyboardButton("Bᴏᴛ Oᴡɴᴇʀ", url="t.me/creatorbeatz")
-                    ]
-                ]
-            )
+    # For users starting without verification
+    verify_status = await get_verify_status(user_id)
+
+    if not verify_status or not verify_status['is_verified']:
+        # Generate new verification token
+        token = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+
+        # Update database with new token (replace old one if exists)
+        await update_verify_status(user_id, verify_token=token, is_verified=False)
+
+        # Create verification link
+        bot_username = BOTUSERNAME
+        verification_link = await get_shortlink(
+            SHORTLINK_URL, SHORTLINK_API, f'https://telegram.dog/{bot_username}?start=verify_{token}'
         )
-    else:
-        await message.reply_text(
-            text=f"Hello {name}, welcome to the bot! Please use the /start command with a file code to proceed.",
-            protect_content=True if PROTECT_CONTENT else False
+
+        # Send verification instructions
+        await bot.send_message(
+            chat_id=update.chat.id,
+            text="To access the bot, please verify yourself using the link below:",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Click here to verify", url=verification_link)],
+                [InlineKeyboardButton("How to use the bot", url=TUT_VID)]
+            ]),
         )
+        return
+
+    # Verified users
+    if verify_status['is_verified']:
+        await bot.send_message(
+            chat_id=update.chat.id,
+            text=f"Welcome back, {name}! Here is your file:",
+        )
+        await get_files(bot, update)
+
 
 @Client.on_message(filters.command(["help"]) & filters.user(ADMINS))
 async def help_m(bot, update):
