@@ -68,8 +68,8 @@ SECOND_SHORTLINK_API = os.environ.get('SECOND_SHORTLINK_API', '6fbf2472d51f7067d
 THIRD_SHORTLINK_URL = os.environ.get('THIRD_SHORTLINK_URL', 'anylinks.in')
 THIRD_SHORTLINK_API = os.environ.get('THIRD_SHORTLINK_API', '6fbf2472d51f7067dee2ad8ab1631f26606afad4')
 
-SHORTLINK_URL = os.environ.get("SHORTLINK_URL", "anylinks.in")
-SHORTLINK_API = os.environ.get("SHORTLINK_API", "6fbf2472d51f7067dee2ad8ab1631f26606afad4")
+SHORTLINK_URL = os.environ.get("SHORTLINK_URL", "nanolinks.in")
+SHORTLINK_API = os.environ.get("SHORTLINK_API", "e13859e7fadd54833b9a08b58a4e901b03bafa24")
 VERIFY_EXPIRE = int(os.environ.get('VERIFY_EXPIRE', 86400)) # Add time in seconds
 IS_VERIFY = os.environ.get("IS_VERIFY", "True")
 TUT_VID = os.environ.get("TUT_VID","https://t.me/how2dow/5")
