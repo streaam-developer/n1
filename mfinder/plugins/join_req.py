@@ -68,7 +68,7 @@ async def autoapprove(client: Client, request: ChatJoinRequest):
 
 @Client.on_message(filters.command("check_request") & filters.private)
 async def check_request_status(client: Client, message: Message):
-    chat_id = -1001234567890  # Replace with your channel ID
+    chat_id = -1002399909983  # Replace with your channel ID
     user_id = message.from_user.id
 
     # Check if user is subscribed
