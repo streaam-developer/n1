@@ -44,7 +44,7 @@ from pyrogram import Client, filters, enums
 from mfinder import *
 from mfinder.utils.utils import temp, is_subscribed
 
-FSUB_CHANNELS = [-1002399909983]
+FSUB_CHANNELS = [-1002348104910]
 
 # Handle private messages
 @Client.on_message(~filters.regex(r"^/") & filters.text & filters.private & filters.incoming)
