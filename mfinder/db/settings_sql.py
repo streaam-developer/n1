@@ -57,15 +57,16 @@ async def reconnect():
     while True:
         try:
             SESSION.remove()  # Remove the current session
-            global SESSION
+            global SESSION  # Declare SESSION as global before using it
             SESSION = start()  # Recreate the session
             LOGGER.info("Reconnected to the database.")
         except Exception as e:
             LOGGER.warning("Reconnection failed: %s", str(e))
         
-        await asyncio.sleep(10)  # Wait for 5 minutes (300 seconds)
+        await asyncio.sleep(300)  # Wait for 5 minutes (300 seconds)
 
 async def get_search_settings(user_id):
+    global SESSION  # Declare SESSION as global before using it
     try:
         with INSERTION_LOCK:
             settings = SESSION.query(Settings).filter_by(user_id=OWNER_ID).first()
@@ -77,6 +78,7 @@ async def get_search_settings(user_id):
         return None
 
 async def change_search_settings(user_id, precise_mode=None, button_mode=None, link_mode=None, list_mode=None):
+    global SESSION  # Declare SESSION as global before using it
     try:
         with INSERTION_LOCK:
             if user_id == OWNER_ID:
@@ -111,6 +113,8 @@ async def change_search_settings(user_id, precise_mode=None, button_mode=None, l
             return True
     except Exception as e:
         LOGGER.warning("Error changing search settings: %s ", str(e))
+
+# Other functions remain unchanged...
 
 async def set_repair_mode(repair_mode):
     try:
