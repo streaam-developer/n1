@@ -11,12 +11,14 @@ BASE = declarative_base()
 
 class Broadcast(BASE):
     __tablename__ = "broadcast"
-    user_id = Column(BigInteger, primary_key=True)
+    user_id = Column(BigInteger, primary_key=True)  # Primary key
     user_name = Column(TEXT)
+    chat_id = Column(BigInteger, nullable=False)  # Add chat_id column
 
-    def __init__(self, user_id, user_name):
+    def __init__(self, user_id, user_name, chat_id):
         self.user_id = user_id
         self.user_name = user_name
+        self.chat_id = chat_id
 
 def start() -> scoped_session:
     engine = create_engine(DB_URL, pool_size=5, max_overflow=10)
@@ -76,7 +78,7 @@ async def add_join_request(user_id, chat_id):
             result = SESSION.query(Broadcast).filter_by(user_id=user_id, chat_id=chat_id).one_or_none()
             if not result:
                 # Add a new join request
-                new_request = Broadcast(user_id=user_id, chat_id=chat_id)
+                new_request = Broadcast(user_id=user_id, user_name=None, chat_id=chat_id)
                 SESSION.add(new_request)
                 SESSION.commit()
         except Exception as e:
@@ -90,8 +92,9 @@ async def check_join_request(user_id, chat_id):
             result = SESSION.query(Broadcast).filter_by(user_id=user_id, chat_id=chat_id).one_or_none()
             return result is not None
         except Exception as e:
+            SESSION.rollback()
             raise e
-
+        
 async def delete_all_join_requests():
     """Delete all join requests from the database."""
     with INSERTION_LOCK:
