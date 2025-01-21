@@ -30,6 +30,7 @@ from mfinder.utils.utils import *
 
 @Client.on_message(filters.command(["start"]))
 async def start(bot, update: Message):
+    client = bot
     user_id = update.from_user.id
     name = update.from_user.first_name if update.from_user.first_name else " "
     user_name = (
@@ -76,10 +77,11 @@ async def start(bot, update: Message):
             reply_markup=reply_markup,
             disable_web_page_preview=True
         )
-
+         
     else:
         # If the user is not verified, provide a verification link
         if IS_VERIFY and not verify_status['is_verified']:
+            bot.username = BOTUSERNAME
             token = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
             await update_verify_status(user_id, verify_token=token, link="")
             link = await get_shortlink(SHORTLINK_URL, SHORTLINK_API, f'https://telegram.dog/{bot.username}?start=verify_{token}')

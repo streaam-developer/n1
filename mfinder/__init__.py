@@ -73,6 +73,7 @@ SHORTLINK_API = os.environ.get("SHORTLINK_API", "6fbf2472d51f7067dee2ad8ab1631f2
 VERIFY_EXPIRE = int(os.environ.get('VERIFY_EXPIRE', 86400)) # Add time in seconds
 IS_VERIFY = os.environ.get("IS_VERIFY", "True")
 TUT_VID = os.environ.get("TUT_VID","https://t.me/how2dow/5")
+BOTUSERNAME = os.environ.get("BOTUSERNAME", "movie_downloaderebot")
 
 
 #verify tutorial 
