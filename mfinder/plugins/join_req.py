@@ -2,8 +2,8 @@ from pyrogram import Client, filters, enums
 from pyrogram.types import ChatJoinRequest
 from mfinder.db.broadcast_sql import check_join_request, add_join_request, delete_all_join_requests
 from mfinder import ADMINS, SECOND_AUTH_CHANNEL, THIRD_AUTH_CHANNEL
-from utils.utils import temp, is_subscribed
 
+from utils.utils import *
 FSUB_CHANNELS = [SECOND_AUTH_CHANNEL, THIRD_AUTH_CHANNEL]
 
 @Client.on_chat_join_request(filters.group | filters.channel)
