@@ -13,7 +13,6 @@ class Broadcast(BASE):
     __tablename__ = "broadcast"
     user_id = Column(BigInteger, primary_key=True)  # Primary key
     user_name = Column(TEXT)
-    chat_id = Column(BigInteger, nullable=False)  # Add chat_id column
 
     def __init__(self, user_id, user_name, chat_id):
         self.user_id = user_id
