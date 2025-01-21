@@ -28,16 +28,11 @@ from pyrogram.errors import FloodWait, UserIsBlocked, InputUserDeactivated
 from mfinder.utils.utils import *
 
 
-from datetime import datetime, timedelta
-
 @Client.on_message(filters.command(["start"], prefixes="/"))
 async def start(bot, update: Message):
     user_id = update.from_user.id
     name = update.from_user.first_name or "User"
     user_name = "@" + update.from_user.username if update.from_user.username else None
-
-    # Expiry duration in seconds (set your desired value)
-    expiry_duration = VERIFY_EXPIRE  # Example: 1 hour
 
     # Add user to the database if not already present
     await add_user(user_id, user_name)
@@ -62,24 +57,8 @@ async def start(bot, update: Message):
         verify_status = await get_verify_status(user_id)
 
         if verify_status and verify_status['verify_token'] == token:
-            # Check if already expired
-            current_time = int(datetime.utcnow().timestamp())
-            if current_time > verify_status['verified_time']:
-                await update_verify_status(user_id, is_verified=False, verify_token=None)
-                await bot.send_message(
-                    chat_id=update.chat.id,
-                    text="Your verification has expired. Please verify again.",
-                )
-                return
-
-            # Mark user as verified and set verified_time + expiry
-            expiry_time = current_time + expiry_duration
-            await update_verify_status(user_id, {
-                'is_verified': True,
-                'verified_time': expiry_time,
-                'verify_token': None,
-                'link': f'https://telegram.dog/{BOTUSERNAME}?start=verify_{token}'
-            })
+            # Mark user as verified
+            await update_verify_status(user_id, is_verified=True, verify_token=None)
 
             # Send success message and requested file
             await bot.send_message(
@@ -102,16 +81,8 @@ async def start(bot, update: Message):
         # Generate new verification token
         token = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
 
-        # Calculate expiry time
-        expiry_time = int(datetime.utcnow().timestamp()) + expiry_duration
-
-        # Update database with new token and expiry time
-        await update_verify_status(user_id, {
-            'is_verified': False,
-            'verified_time': expiry_time,
-            'verify_token': token,
-            'link': f'https://telegram.dog/{BOTUSERNAME}?start=verify_{token}'
-        })
+        # Update database with new token (replace old one if exists)
+        await update_verify_status(user_id, verify_token=token, is_verified=False)
 
         # Create verification link
         bot_username = BOTUSERNAME
@@ -132,21 +103,12 @@ async def start(bot, update: Message):
 
     # Verified users
     if verify_status['is_verified']:
-        # Check if expired
-        current_time = int(datetime.utcnow().timestamp())
-        if current_time > verify_status['verified_time']:
-            await update_verify_status(user_id, is_verified=False, verify_token=None)
-            await bot.send_message(
-                chat_id=update.chat.id,
-                text="Your verification has expired. Please verify again.",
-            )
-            return
-
         await bot.send_message(
             chat_id=update.chat.id,
             text=f"Welcome back, {name}! Here is your file:",
         )
         await get_files(bot, update)
+
 
 @Client.on_message(filters.command(["help"]) & filters.user(ADMINS))
 async def help_m(bot, update):
