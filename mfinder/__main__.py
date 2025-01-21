@@ -3,6 +3,9 @@ import asyncio
 from pyrogram import Client, idle, __version__
 from pyrogram.raw.all import layer
 from mfinder import APP_ID, API_HASH, BOT_TOKEN, OWNER_ID
+import asyncio
+import os
+import signal
 
 uvloop.install()
 
@@ -17,23 +20,20 @@ async def send_restart_message(app):
     except Exception as e:
         print(f"Failed to send restart message: {e}")
 
-async def restart_bot(app):
+async def restart_bot():
     """
-    Function to restart the bot by stopping and starting the app instance.
+    Function to restart the bot by exiting the current process.
     """
-    await app.stop()  # Stop the current instance
-    print("Bot is restarting...")
-    await app.start()  # Start the instance again
-    await send_restart_message(app)
+    print("Restarting the bot...")
+    os.kill(os.getpid(), signal.SIGINT)  # Send SIGINT to terminate the bot
 
-async def schedule_restart(interval_minutes, app):
+async def schedule_restart(interval_minutes):
     """
     Function to schedule the bot to restart at a given interval (in minutes).
     """
     while True:
         await asyncio.sleep(interval_minutes * 60)  # Convert minutes to seconds
-        await restart_bot(app)
-
+        await restart_bot()
 async def main():
     plugins = dict(root="mfinder/plugins")
     app = Client(
