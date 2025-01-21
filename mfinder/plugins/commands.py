@@ -8,13 +8,49 @@ from pyrogram import Client, filters
 from mfinder.db.broadcast_sql import add_user
 from mfinder.db.settings_sql import get_search_settings, change_search_settings
 from mfinder.utils.constants import STARTMSG, HELPMSG
-from mfinder import LOGGER, ADMINS, START_MSG, HELP_MSG, START_KB, HELP_KB
-from mfinder.utils.util_support import humanbytes, get_db_size
+from mfinder import *
+from pyrogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+    CallbackQuery,
+    LinkPreviewOptions,
+)
+from mfinder.utils.util_support import *
 from mfinder.plugins.serve import get_files
+from db.token_sql import *
+
 
 
 @Client.on_message(filters.command(["start"]))
 async def start(bot, update):
+    client = bot
+    message = update
+    data = message.command[1]
+    if data.split("-", 1)[0] == "verify":  # Ensure correct token format
+            userid = data.split("-", 2)[1]
+            token = data.split("-", 3)[2]
+
+            if str(message.from_user.id) != str(userid):
+                return await message.reply_text(
+                    text="<b>Invalid link or Expired link!</b>",
+                    protect_content=True,
+                )
+
+            # Validate the token
+            is_valid = await check_token(userid, token)
+            if is_valid:
+                await message.reply_text(
+                    text=f"<b>Hey {message.from_user.mention}, You are successfully verified!</b>",
+                    protect_content=True,
+                )
+                await verify_user(userid, token)
+            else:
+                return await message.reply_text(
+                    text="<b>Invalid link or Expired link!</b>",
+                    protect_content=True,
+                )
+            
     if len(update.command) == 1:
         user_id = update.from_user.id
         name = update.from_user.first_name if update.from_user.first_name else " "
@@ -29,6 +65,19 @@ async def start(bot, update):
             LOGGER.warning(e)
             start_msg = STARTMSG.format(name, user_id)
 
+        if not await check_verification(client, message.from_user.id) and VERIFY == True:
+         btn = [[
+            InlineKeyboardButton("Verify", url=await get_token(client, message.from_user.id, f"https://telegram.me/{BOT_USERNAME}?start="))
+        ],[
+            InlineKeyboardButton("How To Open Link & Verify", url=VERIFY_TUTORIAL)
+        ]]
+        await message.reply_text(
+            text="<b>You are not verified !\nKindly verify to continue !</b>",
+            protect_content=True,
+            reply_markup=InlineKeyboardMarkup(btn)
+        )
+        return
+        
         await bot.send_message(
             chat_id=update.chat.id,
             text=start_msg,

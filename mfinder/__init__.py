@@ -55,7 +55,13 @@ SECOND_AUTH_CHANNEL = int(second_auth_channel) if second_auth_channel and id_pat
 FSUB_CHANNELS = int(third_auth_channel) if third_auth_channel and id_pattern.search(third_auth_channel) else None
 THIRD_AUTH_CHANNEL = int(third_auth_channel) if third_auth_channel and id_pattern.search(third_auth_channel) else None
 
+#shortner
 
+API = os.environ.get("API", "") # shortlink api
+URL = os.environ.get("URL", "") # shortlink domain without https://
+VERIFY_TUTORIAL = os.environ.get("VERIFY_TUTORIAL", "") # how to open link 
+BOT_USERNAME = os.environ.get("BOT_USERNAME", "") # bot username without @
+VERIFY = os.environ.get("VERIFY", "True") # set True Or False and make sure spelling is correct and first letter capital.
 
 # logging Conf
 logging.config.fileConfig(fname="config.ini", disable_existing_loggers=False)
