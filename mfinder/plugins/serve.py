@@ -133,7 +133,7 @@ async def group_filter_(bot, message):
 
 async def check_force_sub(bot, user_id):
     try:
-        force_sub = AUTH_CHANNEL
+        force_sub = THIRD_AUTH_CHANNEL
         if force_sub:
             user = await bot.get_chat_member(int(force_sub), user_id)
             if user.status == ChatMemberStatus.BANNED:
@@ -141,20 +141,19 @@ async def check_force_sub(bot, user_id):
                 return False
     except UserNotParticipant:
         join_link = await get_link()
-        await bot.send_message(
-            user_id,
-            "**Please join my Update Channel to use this Bot!**",
-            reply_markup=InlineKeyboardMarkup(
-                [[InlineKeyboardButton("\U0001F916 Join Channel", url=join_link)]]
+        if join_link:
+            await bot.send_message(
+                user_id,
+                "**Please join my Update Channel to use this Bot!**",
+                reply_markup=InlineKeyboardMarkup(
+                    [[InlineKeyboardButton("🤖 Join Channel", url=join_link)]]
+                )
             )
-        )
+        else:
+            LOGGER.error("join_link is None, cannot construct InlineKeyboardMarkup.")
         return False
     except Exception as e:
-        LOGGER.warning(e)
-        await bot.send_message(
-            user_id,
-            "Something went wrong. Please contact support.",
-        )
+        LOGGER.warning(f"Force subscription check failed: {e}")
         return False
     return True
 
