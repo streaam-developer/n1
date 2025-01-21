@@ -20,7 +20,7 @@ from mfinder.utils.util_support import *
 from mfinder.plugins.serve import get_files
 from mfinder.db.token_sql import *
 
-
+from mfinder import *
 
 from pyrogram.enums import ParseMode
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
@@ -37,7 +37,7 @@ async def start(bot, update: Message):
     # Add user to the database if not already present
     await add_user(user_id, user_name)
 
-    IS_VERIFY = False  # Set this to True if verification is needed
+    # Set this to True if verification is needed
 
     # Check if user started with a parameter
     start_params = update.text.split(" ", 1)  # Split command and its arguments
