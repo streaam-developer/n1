@@ -28,67 +28,87 @@ from pyrogram.errors import FloodWait, UserIsBlocked, InputUserDeactivated
 from mfinder.utils.utils import *
 
 
-@Client.on_message(filters.command(["start"]))
+@Client.on_message(filters.command(["start"], prefixes="/"))
 async def start(bot, update: Message):
     user_id = update.from_user.id
-    name = update.from_user.first_name if update.from_user.first_name else " "
+    name = update.from_user.first_name or "User"
     user_name = "@" + update.from_user.username if update.from_user.username else None
 
-    # Add user if not already in the database
+    # Add user to the database if not already present
     await add_user(user_id, user_name)
-    try:
-            start_msg = START_MSG.format(name, user_id)
-    except Exception as e:
-            LOGGER.warning(e)
-            start_msg = STARTMSG.format(name, user_id)
 
-    await bot.send_message(
+    # Check if user started with a parameter
+    start_params = update.text.split(" ", 1)  # Split command and its arguments
+    if len(start_params) == 1:
+        # No parameters, send a basic welcome message
+        await bot.send_message(
             chat_id=update.chat.id,
-            text=start_msg,
-            reply_to_message_id=update.reply_to_message_id,
+            text=f"Hello {name}, welcome to the bot!",
             reply_markup=START_KB,
         )
+        return
 
+    # Extract parameter
+    param = start_params[1]
 
-    # Get the user's verification status
+    # Handle verification parameter
+    if param.startswith("verify_"):
+        token = param.split("verify_")[1]
+        verify_status = await get_verify_status(user_id)
+
+        if verify_status and verify_status['verify_token'] == token:
+            # Mark user as verified
+            await update_verify_status(user_id, is_verified=True, verify_token=None)
+
+            # Send success message and requested file
+            await bot.send_message(
+                chat_id=update.chat.id,
+                text=f"Thank you {name}, you are now verified! Here is your file:",
+            )
+            await get_files(bot, update)
+        else:
+            # Invalid or expired token
+            await bot.send_message(
+                chat_id=update.chat.id,
+                text="Invalid or expired verification link. Please restart to generate a new one.",
+            )
+        return
+
+    # For users starting without verification
     verify_status = await get_verify_status(user_id)
 
     if not verify_status or not verify_status['is_verified']:
-        # New or unverified user: send the verification message
+        # Generate new verification token
         token = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
-        await update_verify_status(user_id, verify_token=token, is_verified=False, link="")
 
+        # Update database with new token (replace old one if exists)
+        await update_verify_status(user_id, verify_token=token, is_verified=False)
+
+        # Create verification link
         bot_username = BOTUSERNAME
-        verification_link = await get_shortlink(SHORTLINK_URL, SHORTLINK_API, f'https://telegram.dog/{bot_username}?start=verify_{token}')
-        verification_button = [
-            [InlineKeyboardButton("Click here to verify", url=verification_link)],
-            [InlineKeyboardButton("How to use the bot", url=TUT_VID)]
-        ]
-
-        
-
-        return  # Stop further processing for unverified users
-
-    if verify_status['is_verified']:
-        # Verified user: send a welcome message and provide files if necessary
-        reply_markup = InlineKeyboardMarkup(
-            [[InlineKeyboardButton("About Me", callback_data="about"),
-              InlineKeyboardButton("Close", callback_data="close")]]
+        verification_link = await get_shortlink(
+            SHORTLINK_URL, SHORTLINK_API, f'https://telegram.dog/{bot_username}?start=verify_{token}'
         )
+
+        # Send verification instructions
         await bot.send_message(
             chat_id=update.chat.id,
-            text=f"Welcome {update.from_user.first_name}!\n\nID: {update.from_user.id}",
-            reply_markup=reply_markup,
-            disable_web_page_preview=True
+            text="To access the bot, please verify yourself using the link below:",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Click here to verify", url=verification_link)],
+                [InlineKeyboardButton("How to use the bot", url=TUT_VID)]
+            ]),
         )
+        return
 
-        # Send files if needed
-        await get_files(bot, update)  # Assuming get_files is your function to provide files
+    # Verified users
+    if verify_status['is_verified']:
+        await bot.send_message(
+            chat_id=update.chat.id,
+            text=f"Welcome back, {name}! Here is your file:",
+        )
+        await get_files(bot, update)
 
-    # Ensure search settings are configured for the user
-    search_settings = await get_search_settings(user_id)
-    if not search_settings:
-        await change_search_settings(user_id, link_mode=True)
 
 @Client.on_message(filters.command(["help"]) & filters.user(ADMINS))
 async def help_m(bot, update):
