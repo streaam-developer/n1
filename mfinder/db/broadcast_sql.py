@@ -18,7 +18,6 @@ class Broadcast(BASE):
     def __init__(self, user_id, user_name, chat_id):
         self.user_id = user_id
         self.user_name = user_name
-        self.chat_id = chat_id
 
 def start() -> scoped_session:
     engine = create_engine(DB_URL, pool_size=5, max_overflow=10)
