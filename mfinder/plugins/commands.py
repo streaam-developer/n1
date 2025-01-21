@@ -1,5 +1,5 @@
 import os
-import sys
+import sys, random,string
 import asyncio
 import time
 import shutil
@@ -22,105 +22,95 @@ from mfinder.db.token_sql import *
 
 
 
+from pyrogram import Client, filters
+from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
+from utils import get_verify_status, update_verify_status, get_shortlink, get_exp_time
+
+
 @Client.on_message(filters.command(["start"]))
-async def start(bot, update):
-    client = bot
-    message = update
+async def start(bot, update: Message):
+    user_id = update.from_user.id
+    name = update.from_user.first_name if update.from_user.first_name else " "
+    user_name = (
+        "@" + update.from_user.username if update.from_user.username else None
+    )
+    
+    # Add user logic (can be your own function or DB update)
+    await add_user(user_id, user_name)
 
-    # Handle cases where no arguments are passed to /start
-    if len(message.command) < 2:
-        await message.reply_text("Welcome! Use the bot commands to get started.")
-        return
-
-    data = message.command[1]
-
-    # Handle "verify" token logic
-    if data.split("-", 1)[0] == "verify":
-        try:
-            userid = data.split("-", 2)[1]
-            token = data.split("-", 3)[2]
-
-            if str(message.from_user.id) != str(userid):
-                return await message.reply_text(
-                    text="<b>Invalid link or Expired link!</b>",
-                    protect_content=True,
-                )
-
-            # Validate the token
-            is_valid = await check_token(userid, token)
-            if is_valid:
-                await message.reply_text(
-                    text=f"<b>Hey {message.from_user.mention}, You are successfully verified!</b>",
-                    protect_content=True,
-                )
-                await verify_user(userid, token)
-            else:
-                return await message.reply_text(
-                    text="<b>Invalid link or Expired link!</b>",
-                    protect_content=True,
-                )
-        except Exception as e:
-            await message.reply_text(f"An error occurred: {e}")
-            return
-
-    # Register new user
-    if len(message.command) == 1:
-        user_id = message.from_user.id
-        name = message.from_user.first_name or " "
-        user_name = f"@{message.from_user.username}" if message.from_user.username else None
-
-        try:
-            await add_user(user_id, user_name)
-        except Exception as e:
-            print(f"Error adding user: {e}")
-
-        # Prepare the start message
-        try:
-            start_msg = START_MSG.format(name, user_id)
-        except Exception as e:
-            print(f"Error formatting start message: {e}")
-            start_msg = "Welcome to the bot!"
-
-        # Check if verification is required
-        if not await check_verification(client, user_id) and VERIFY is True:
-            try:
-                verify_link = await get_token(client, user_id, f"https://telegram.me/{BOT_USERNAME}?start=")
-                btn = [
-                    [InlineKeyboardButton("Verify", url=verify_link)],
-                    [InlineKeyboardButton("How To Open Link & Verify", url=VERIFY_TUTORIAL)],
-                ]
-                await message.reply_text(
-                    text="<b>You are not verified!\nKindly verify to continue!</b>",
-                    protect_content=True,
-                    reply_markup=InlineKeyboardMarkup(btn),
-                )
-            except Exception as e:
-                print(f"Error generating verification link: {e}")
-                await message.reply_text("Unable to generate verification link. Please try again.")
-            return
-
-        # Send the welcome message
+    # Check the verification status of the user
+    verify_status = await get_verify_status(user_id)
+    
+    # Handle expired verification
+    if verify_status['is_verified'] and VERIFY_EXPIRE < (time.time() - verify_status['verified_time']):
+        await update_verify_status(user_id, is_verified=False)
+    
+    # Token verification process
+    if "verify_" in update.text:
+        _, token = update.text.split("_", 1)
+        if verify_status['verify_token'] != token:
+            return await bot.send_message(
+                chat_id=update.chat.id,
+                text="Your token is invalid or expired. Try again by clicking /start"
+            )
+        
+        await update_verify_status(user_id, is_verified=True, verified_time=time.time())
+        reply_markup = None if verify_status["link"] == "" else None
         await bot.send_message(
-            chat_id=message.chat.id,
-            text=start_msg,
-            reply_to_message_id=message.reply_to_message_id,
-            reply_markup=START_KB,
+            chat_id=update.chat.id,
+            text="Your token has been successfully verified and is valid for: 24 Hours",
+            reply_markup=reply_markup,
+            protect_content=False
         )
 
-        # Update search settings
-        try:
-            search_settings = await get_search_settings(user_id)
-            if not search_settings:
-                await change_search_settings(user_id, link_mode=True)
-        except Exception as e:
-            print(f"Error updating search settings: {e}")
+    elif verify_status['is_verified']:
+        # Send a welcome message if the user is verified
+        reply_markup = InlineKeyboardMarkup(
+            [[InlineKeyboardButton("About Me", callback_data="about"),
+              InlineKeyboardButton("Close", callback_data="close")]]
+        )
+        await bot.send_message(
+            chat_id=update.chat.id,
+            text=f"Welcome {update.from_user.first_name}!\n\nID: {update.from_user.id}",
+            reply_markup=reply_markup,
+            disable_web_page_preview=True
+        )
 
-    # Handle /start with additional data
-    elif len(message.command) == 2:
-        try:
-            await get_files(bot, message)
-        except Exception as e:
-            print(f"Error processing get_files: {e}")
+    else:
+        # If the user is not verified, provide a verification link
+        if IS_VERIFY and not verify_status['is_verified']:
+            token = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+            await update_verify_status(user_id, verify_token=token, link="")
+            link = await get_shortlink(SHORTLINK_URL, SHORTLINK_API, f'https://telegram.dog/{bot.username}?start=verify_{token}')
+            btn = [
+                [InlineKeyboardButton("Click here to verify", url=link)],
+                [InlineKeyboardButton('How to use the bot', url=TUT_VID)]
+            ]
+            await bot.send_message(
+                chat_id=update.chat.id,
+                text=f"Your Ads token is expired. Refresh your token and try again.\n\nToken Timeout: {get_exp_time(VERIFY_EXPIRE)}\n\nWhat is the token?\n\nThis is an ads token. Once you pass an ad, you can use the bot for 24 hours.",
+                reply_markup=InlineKeyboardMarkup(btn),
+                protect_content=False
+            )
+
+    # Send the starting message with button
+    try:
+        start_msg = START_MSG.format(name, user_id)
+    except Exception as e:
+        LOGGER.warning(e)
+        start_msg = STARTMSG.format(name, user_id)
+
+    await bot.send_message(
+        chat_id=update.chat.id,
+        text=start_msg,
+        reply_to_message_id=update.reply_to_message_id,
+        reply_markup=START_KB,
+    )
+
+    # Ensure search settings for the user
+    search_settings = await get_search_settings(user_id)
+    if not search_settings:
+        await change_search_settings(user_id, link_mode=True)
 
 @Client.on_message(filters.command(["help"]) & filters.user(ADMINS))
 async def help_m(bot, update):
