@@ -26,8 +26,17 @@ from mfinder.db.token_sql import *
 async def start(bot, update):
     client = bot
     message = update
+
+    # Handle cases where no arguments are passed to /start
+    if len(message.command) < 2:
+        await message.reply_text("Welcome! Use the bot commands to get started.")
+        return
+
     data = message.command[1]
-    if data.split("-", 1)[0] == "verify":  # Ensure correct token format
+
+    # Handle "verify" token logic
+    if data.split("-", 1)[0] == "verify":
+        try:
             userid = data.split("-", 2)[1]
             token = data.split("-", 3)[2]
 
@@ -50,46 +59,68 @@ async def start(bot, update):
                     text="<b>Invalid link or Expired link!</b>",
                     protect_content=True,
                 )
-            
-    if len(update.command) == 1:
-        user_id = update.from_user.id
-        name = update.from_user.first_name if update.from_user.first_name else " "
-        user_name = (
-            "@" + update.from_user.username if update.from_user.username else None
-        )
-        await add_user(user_id, user_name)
+        except Exception as e:
+            await message.reply_text(f"An error occurred: {e}")
+            return
 
+    # Register new user
+    if len(message.command) == 1:
+        user_id = message.from_user.id
+        name = message.from_user.first_name or " "
+        user_name = f"@{message.from_user.username}" if message.from_user.username else None
+
+        try:
+            await add_user(user_id, user_name)
+        except Exception as e:
+            print(f"Error adding user: {e}")
+
+        # Prepare the start message
         try:
             start_msg = START_MSG.format(name, user_id)
         except Exception as e:
-            LOGGER.warning(e)
-            start_msg = STARTMSG.format(name, user_id)
+            print(f"Error formatting start message: {e}")
+            start_msg = "Welcome to the bot!"
 
-        if not await check_verification(client, message.from_user.id) and VERIFY == True:
-         btn = [[
-            InlineKeyboardButton("Verify", url=await get_token(client, message.from_user.id, f"https://telegram.me/{BOT_USERNAME}?start="))
-        ],[
-            InlineKeyboardButton("How To Open Link & Verify", url=VERIFY_TUTORIAL)
-        ]]
-        await message.reply_text(
-            text="<b>You are not verified !\nKindly verify to continue !</b>",
-            protect_content=True,
-            reply_markup=InlineKeyboardMarkup(btn)
-        )
-        return
-        
+        # Check if verification is required
+        if not await check_verification(client, user_id) and VERIFY is True:
+            try:
+                verify_link = await get_token(client, user_id, f"https://telegram.me/{BOT_USERNAME}?start=")
+                btn = [
+                    [InlineKeyboardButton("Verify", url=verify_link)],
+                    [InlineKeyboardButton("How To Open Link & Verify", url=VERIFY_TUTORIAL)],
+                ]
+                await message.reply_text(
+                    text="<b>You are not verified!\nKindly verify to continue!</b>",
+                    protect_content=True,
+                    reply_markup=InlineKeyboardMarkup(btn),
+                )
+            except Exception as e:
+                print(f"Error generating verification link: {e}")
+                await message.reply_text("Unable to generate verification link. Please try again.")
+            return
+
+        # Send the welcome message
         await bot.send_message(
-            chat_id=update.chat.id,
+            chat_id=message.chat.id,
             text=start_msg,
-            reply_to_message_id=update.reply_to_message_id,
+            reply_to_message_id=message.reply_to_message_id,
             reply_markup=START_KB,
         )
-        search_settings = await get_search_settings(user_id)
-        if not search_settings:
-            await change_search_settings(user_id, link_mode=True)
-    elif len(update.command) == 2:
-        await get_files(bot, update)
 
+        # Update search settings
+        try:
+            search_settings = await get_search_settings(user_id)
+            if not search_settings:
+                await change_search_settings(user_id, link_mode=True)
+        except Exception as e:
+            print(f"Error updating search settings: {e}")
+
+    # Handle /start with additional data
+    elif len(message.command) == 2:
+        try:
+            await get_files(bot, message)
+        except Exception as e:
+            print(f"Error processing get_files: {e}")
 
 @Client.on_message(filters.command(["help"]) & filters.user(ADMINS))
 async def help_m(bot, update):
