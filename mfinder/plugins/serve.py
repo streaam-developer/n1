@@ -16,9 +16,6 @@ from mfinder.db.files_sql import (
     get_file_details,
     get_precise_filter_results,
 )
-import pytz, traceback, requests, string, tracemalloc, logging, random, math, ast, os, re, asyncio
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
 from mfinder.db.settings_sql import (
     get_search_settings,
     get_admin_settings,
@@ -28,81 +25,34 @@ from mfinder.db.settings_sql import (
 from mfinder.db.ban_sql import is_banned
 from mfinder.db.filters_sql import is_filter
 from mfinder import LOGGER
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto, ChatJoinRequest
-from pyrogram import Client, filters, enums
-from .join_req import FSUB_CHANNELS
-import re
-from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from pyrogram.enums import ChatMemberStatus
-from pyrogram.errors import UserNotParticipant
-from mfinder.db.settings_sql import get_channel, get_link
-from mfinder.db.ban_sql import is_banned
-from mfinder.db.filters_sql import is_filter
-from mfinder import LOGGER
-from pyrogram import Client, filters, enums
-from mfinder import *
-from mfinder.utils.utils import temp, is_subscribed
 
-FSUB_CHANNELS = [-1002348104910]
-
-# Handle private messages
-from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from pyrogram.errors import UserNotParticipant, RPCError
-import re
-
-# Check if a user is subscribed to a channel
-async def is_subscribed(bot, user_id, channel_id):
-    try:
-        member = await bot.get_chat_member(channel_id, user_id)
-        return member.status in ["member", "administrator", "creator"]
-    except UserNotParticipant:
-        return False
-    except RPCError as e:
-        print(f"Subscription check error for user {user_id} in channel {channel_id}: {e}")
-        return False
-
-# Handle private messages
-@Client.on_message(~filters.regex(r"^/") & filters.text & filters.private & filters.incoming)
+@Client.on_message(~filters.regex(r"^\/") & filters.text & filters.private & filters.incoming)
 async def filter_(bot, message):
     user_id = message.from_user.id
 
-    # Skip commands or special characters
-    if re.findall(r"((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
+    # Skip if the message contains a command or special characters
+    if re.findall("((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
         return
 
-    # Check if user is banned
+    # Check if the user is banned
     if await is_banned(user_id):
         await message.reply_text("You are banned. You can't use this bot.", quote=True)
         return
 
-    # Check subscription for each channel in FSUB_CHANNELS
-    unjoined_channels = []
-    for channel_id in FSUB_CHANNELS:
-        if not await is_subscribed(bot, user_id, channel_id):
-            unjoined_channels.append(channel_id)
+    # Force subscription check
+    if not await check_force_sub(bot, user_id):
+        return
 
-    # Prompt user to join required channels
-    if unjoined_channels:
+    # Check if the message matches any filter
+    fltr = await is_filter(message.text)
+    if fltr:
         await message.reply_text(
-            "Please join the required channels to use this bot.",
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [InlineKeyboardButton("Join Channel", url=AUTH_LINK)],
-                    [InlineKeyboardButton("I'm Subscribed ✅", callback_data="check_subscription")],
-                ]
-            ),
+            text=fltr.message,
+            quote=True,
         )
         return
 
-    # Check for filters
-    fltr = await is_filter(message.text)
-    if fltr:
-        await message.reply_text(text=fltr.message, quote=True)
-        return
-
-    # Proceed with search
+    # Proceed with searching after joining the channel
     if 2 < len(message.text) < 100:
         search = message.text
         page_no = 1
@@ -111,42 +61,51 @@ async def filter_(bot, message):
         result, btn = await get_result(search, page_no, user_id, username)
 
         if result:
-            await message.reply_text(result, reply_markup=InlineKeyboardMarkup(btn) if btn else None, quote=True)
+            if btn:
+                await message.reply_text(
+                    f"{result}",
+                    reply_markup=InlineKeyboardMarkup(btn),
+                    quote=True,
+                )
+            else:
+                await message.reply_text(
+                    f"{result}",
+                    quote=True,
+                )
         else:
-            await message.reply_text("No results found. Try again with a different query.", quote=True)
+            await message.reply_text(
+                text="No results found.\nOr retry with the correct spelling \U0001F92D",
+                quote=True,
+            )
 
-# Handle group messages
-@Client.on_message(filters.group & ~filters.regex(r"^/") & filters.text & filters.incoming)
+@Client.on_message(filters.group & ~filters.regex(r"^\/") & filters.text & filters.incoming)
 async def group_filter_(bot, message):
     user_id = message.from_user.id
     group_id = message.chat.id
 
-    # Check subscription for each channel in FSUB_CHANNELS
-    unjoined_channels = []
-    for channel_id in FSUB_CHANNELS:
-        if not await is_subscribed(bot, user_id, channel_id):
-            unjoined_channels.append(channel_id)
+    # Skip if the message contains a command or special characters
+    if re.findall("((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
+        return
 
-    # Prompt user to join required channels
-    if unjoined_channels:
+    # Check if the user is banned
+    if await is_banned(user_id):
+        await message.reply_text("You are banned from using this bot.", quote=True)
+        return
+
+    # Force subscription check
+    if not await check_force_sub(bot, user_id):
+        return
+
+    # Check if the message matches any filter
+    fltr = await is_filter(message.text)
+    if fltr:
         await message.reply_text(
-            "Please join the required channels to use this bot.",
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [InlineKeyboardButton("Join Channel", url=AUTH_LINK)],
-                    [InlineKeyboardButton("I'm Subscribed ✅", callback_data="check_subscription")],
-                ]
-            ),
+            text=fltr.message,
+            quote=True,
         )
         return
 
-    # Check for filters
-    fltr = await is_filter(message.text)
-    if fltr:
-        await message.reply_text(text=fltr.message, quote=True)
-        return
-
-    # Proceed with search
+    # Proceed with searching after joining the channel
     if 2 < len(message.text) < 100:
         search = message.text
         page_no = 1
@@ -155,13 +114,49 @@ async def group_filter_(bot, message):
         result, btn = await get_result(search, page_no, user_id, username)
 
         if result:
-            await message.reply_text(result, reply_markup=InlineKeyboardMarkup(btn) if btn else None, quote=True)
+            if btn:
+                await message.reply_text(
+                    f"{result}",
+                    reply_markup=InlineKeyboardMarkup(btn),
+                    quote=True,
+                )
+            else:
+                await message.reply_text(
+                    f"{result}",
+                    quote=True,
+                )
         else:
             await message.reply_text(
-                text="No results found.\nOr retry with the correct spelling 🤐",
+                text="No results found.\nOr retry with the correct spelling \U0001F92D",
                 quote=True,
             )
 
+async def check_force_sub(bot, user_id):
+    try:
+        force_sub = await get_channel()
+        if force_sub:
+            user = await bot.get_chat_member(int(force_sub), user_id)
+            if user.status == ChatMemberStatus.BANNED:
+                await bot.send_message(user_id, "Sorry, you are banned from using the bot.")
+                return False
+    except UserNotParticipant:
+        join_link = await get_link()
+        await bot.send_message(
+            user_id,
+            "**Please join my Update Channel to use this Bot!**",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("\U0001F916 Join Channel", url=join_link)]]
+            )
+        )
+        return False
+    except Exception as e:
+        LOGGER.warning(e)
+        await bot.send_message(
+            user_id,
+            "Something went wrong. Please contact support.",
+        )
+        return False
+    return True
 
 # Update the callback query handler to handle file requests in group and send to PM
 from pyrogram.errors import PeerIdInvalid
@@ -254,10 +249,9 @@ async def pages(bot, query):
             pass
     else:
         await query.message.reply_text(
-            text="No results found.\nOr retry with the correct spelling 🤐",
+            text="No results found.\nOr retry with the correct spelling \U0001F92D",
             quote=True,
         )
-
 
 async def get_result(search, page_no, user_id, username):
     search_settings = await get_search_settings(user_id)
@@ -361,7 +355,7 @@ async def get_result(search, page_no, user_id, username):
             result = (
                 result
                 + "\n\n"
-                + "🔻 __Tap on below corresponding file number to download.__ 🔻"
+                + "\U0001F53B __Tap on below corresponding file number to download.__ \U0001F53B"
             )
         elif link_mode == "ON":
             result = result + "\n\n" + " __Tap on file name & then start to download.__"
@@ -369,7 +363,6 @@ async def get_result(search, page_no, user_id, username):
         return result, btn
 
     return None, None
-
 
 @Client.on_callback_query(filters.regex(r"^file (.+)$"))
 async def get_files(bot, query):
@@ -423,6 +416,3 @@ def get_size(size):
         i += 1
         size /= 1024.0
     return f"{size:.2f} {units[i]}"
-
-
-

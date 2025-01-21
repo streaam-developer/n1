@@ -35,14 +35,7 @@ class Files(BASE):
 
 
 def start() -> scoped_session:
-    engine = create_engine(
-    DB_URL,
-    pool_size=20,         # Number of connections in the pool
-    max_overflow=10,      # Extra connections beyond the pool size
-    pool_timeout=30,      # Timeout in seconds for getting a connection
-    pool_recycle=3600,    # Recycle connections every hour
-    pool_pre_ping=True,   # Ensure connections are alive before using
-)
+    engine = create_engine(DB_URL, poolclass=QueuePool)
     BASE.metadata.bind = engine
     BASE.metadata.create_all(engine)
     return scoped_session(sessionmaker(bind=engine, autoflush=False))
