@@ -96,7 +96,7 @@ async def group_filter_(bot, message):
     join_link = JOIN1
     join_button = InlineKeyboardMarkup(
             [[InlineKeyboardButton(" Join Channel", url=join_link)],
-             [InlineKeyboardButton(" Join Channel", url=join_link)]]
+             [InlineKeyboardButton(" Join Channel", url=join_link2)]]
 
         )
     # Force subscription check
@@ -145,7 +145,7 @@ async def check_force_sub(bot, user_id, private):
     try:
         join_link2 = JOIN2
         join_link = JOIN1
-        force_sub = "-1002348104910"
+        force_sub = AUTH_CHANNEL
         if force_sub:
             user = await bot.get_chat_member(int(force_sub), user_id)
             if user.status == ChatMemberStatus.BANNED:
@@ -160,7 +160,7 @@ async def check_force_sub(bot, user_id, private):
         
         join_button = InlineKeyboardMarkup(
             [[InlineKeyboardButton(" Join Channel", url=join_link)],
-             [InlineKeyboardButton(" Join Channel", url=join_link)]]
+             [InlineKeyboardButton(" Join Channel", url=join_link2)]]
 
         )
 
