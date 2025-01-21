@@ -92,6 +92,7 @@ async def group_filter_(bot, message):
         await message.reply_text("You are banned from using this bot.", quote=True)
         return
     message_text = "**Please join my Update Channel to use this Bot!**"
+    join_link = "https://t.me/epiccinemanearme"
     join_button = InlineKeyboardMarkup(
             [[InlineKeyboardButton(" Join Channel", url=join_link)]]
         )
