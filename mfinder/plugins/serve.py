@@ -91,9 +91,15 @@ async def group_filter_(bot, message):
     if await is_banned(user_id):
         await message.reply_text("You are banned from using this bot.", quote=True)
         return
-
+    message_text = "**Please join my Update Channel to use this Bot!**"
+    join_button = InlineKeyboardMarkup(
+            [[InlineKeyboardButton(" Join Channel", url=join_link)]]
+        )
     # Force subscription check
     if not await check_force_sub(bot, user_id, private=False):
+        await bot.reply_text(text=message_text,
+                reply_markup=join_button
+            )
         return
 
     # Check if the message matches any filter
