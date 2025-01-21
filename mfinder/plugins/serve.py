@@ -104,12 +104,12 @@ async def group_filter_(bot, message):
     if re.findall(r"((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
         return
 
-    # Check if user is banned
+    # Check if the user is banned
     if await is_banned(user_id):
         await message.reply_text("You are banned from using this bot.", quote=True)
         return
 
-    # Check subscription
+    # Check subscription for all channels
     unjoined_channels = []
     for channel_id in FSUB_CHANNELS:
         if not await is_subscribed(bot, message, channel_id, AUTH_LINK):
@@ -119,7 +119,7 @@ async def group_filter_(bot, message):
         btn = [[InlineKeyboardButton("Join Channel", url=AUTH_LINK)]]
         btn.append([InlineKeyboardButton("I'm Subscribed ✅", callback_data="groupchecksub")])
         subscribe_message = await message.reply_text(
-            f"Hey {message.from_user.mention}, please join all required channels to request in the group.",
+            "Please join all required channels to use this bot.",
             reply_markup=InlineKeyboardMarkup(btn),
             disable_web_page_preview=True,
         )
@@ -131,6 +131,7 @@ async def group_filter_(bot, message):
     if fltr:
         await message.reply_text(text=fltr.message, quote=True)
         return
+
 
     # Proceed with searching after joining the channel
     if 2 < len(message.text) < 100:
