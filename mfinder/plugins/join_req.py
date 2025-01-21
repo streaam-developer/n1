@@ -10,8 +10,8 @@ FSUB_CHANNELS = [THIRD_AUTH_CHANNEL]
 from pyrogram import Client, filters
 from pyrogram.types import ChatJoinRequest, Message
 from pyrogram.errors import UserNotParticipant, ChatAdminRequired, RPCError
-from utils import temp
-from info import FSUB_CHANNELS, AUTH_LINK
+from mfinder.utils.utils import temp
+from mfinder import FSUB_CHANNELS, AUTH_LINK
 
 # Check if a user is subscribed to a channel or pending approval
 async def check_subscription(bot, user_id, chat_id):
