@@ -36,6 +36,19 @@ async def start(bot, update: Message):
 
     # Add user if not already in the database
     await add_user(user_id, user_name)
+    try:
+            start_msg = START_MSG.format(name, user_id)
+    except Exception as e:
+            LOGGER.warning(e)
+            start_msg = STARTMSG.format(name, user_id)
+
+    await bot.send_message(
+            chat_id=update.chat.id,
+            text=start_msg,
+            reply_to_message_id=update.reply_to_message_id,
+            reply_markup=START_KB,
+        )
+
 
     # Get the user's verification status
     verify_status = await get_verify_status(user_id)
@@ -52,13 +65,7 @@ async def start(bot, update: Message):
             [InlineKeyboardButton("How to use the bot", url=TUT_VID)]
         ]
 
-        start_msg = "Welcome! Please verify yourself by clicking the button below."
-        await bot.send_message(
-            chat_id=update.chat.id,
-            text=start_msg,
-            reply_markup=InlineKeyboardMarkup(verification_button),
-            protect_content=False
-        )
+        
 
         return  # Stop further processing for unverified users
 
