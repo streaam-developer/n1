@@ -53,6 +53,8 @@ AUTH_LINK = os.environ.get('AUTH_LINK', 'https://t.me/+9W5kpNQCZyZhM2I9')
 AUTH_CHANNEL = int(auth_channel) if auth_channel and id_pattern.search(auth_channel) else None
 SECOND_AUTH_CHANNEL = int(second_auth_channel) if second_auth_channel and id_pattern.search(second_auth_channel) else None
 FSUB_CHANNELS = int(third_auth_channel) if third_auth_channel and id_pattern.search(third_auth_channel) else None
+THIRD_AUTH_CHANNEL = int(third_auth_channel) if third_auth_channel and id_pattern.search(third_auth_channel) else None
+
 
 
 # logging Conf
