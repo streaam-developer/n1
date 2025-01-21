@@ -42,7 +42,7 @@ from mfinder.db.filters_sql import is_filter
 from mfinder import LOGGER
 from pyrogram import Client, filters, enums
 from mfinder import *
-from utils.utils import temp, is_subscribed
+from mfinder.utils.utils import temp, is_subscribed
 @Client.on_message(~filters.regex(r"^\/") & filters.text & filters.private & filters.incoming)
 async def filter_(bot, message):
     user_id = message.from_user.id
