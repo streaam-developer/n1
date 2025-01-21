@@ -1,6 +1,8 @@
 from sqlalchemy import create_engine, Column, BigInteger, Boolean, String, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
+from mfinder import *
+from sqlalchemy.pool import QueuePool
 
 # SQLAlchemy base and table definition
 Base = declarative_base()
