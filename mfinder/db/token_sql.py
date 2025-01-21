@@ -15,7 +15,7 @@ class Verify(Base):
     link = Column(String(255), default='')
 
 # Database connection setup
-engine = create_engine('mysql+pymysql://user:password@localhost/database')
+engine = create_engine(DB_URL, poolclass=QueuePool)
 Session = scoped_session(sessionmaker(bind=engine))
 Base.metadata.create_all(engine)
 
