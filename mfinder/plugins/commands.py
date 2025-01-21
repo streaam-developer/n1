@@ -18,7 +18,7 @@ from pyrogram.types import (
 )
 from mfinder.utils.util_support import *
 from mfinder.plugins.serve import get_files
-from db.token_sql import *
+from mfinder.db.token_sql import *
 
 
 
