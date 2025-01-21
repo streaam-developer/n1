@@ -11,13 +11,13 @@ async def autoapprove(client: Client, message: ChatJoinRequest):
     user = message.from_user
     all_joined = True
 
-    # Use the permanent invite link for all required channels
+    # Check membership for each channel in FSUB_CHANNELS
     for channel_id in FSUB_CHANNELS:
         if not await is_subscribed(client, message, channel_id, AUTH_LINK):
             all_joined = False
             break
 
-    # If the user is subscribed to all channels, approve the request
+    # Approve the join request if subscribed to all channels
     if all_joined:
         await client.approve_chat_join_request(chat_id=message.chat.id, user_id=user.id)
 
