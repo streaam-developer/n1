@@ -71,16 +71,19 @@ async def count_users():
 from sqlalchemy.orm.exc import NoResultFound
 
 async def add_join_request(user_id, chat_id):
-    """Add a join request to the database."""
+    """Add or update a join request in the database."""
     with INSERTION_LOCK:
         try:
-            # Check if the join request already exists
-            result = SESSION.query(Broadcast).filter_by(user_id=user_id, chat_id=chat_id).one_or_none()
-            if not result:
+            # Check if the record already exists
+            existing_request = SESSION.query(Broadcast).filter_by(user_id=user_id).one_or_none()
+            if existing_request:
+                # Update the existing record's chat_id
+                existing_request.chat_id = chat_id
+            else:
                 # Add a new join request
                 new_request = Broadcast(user_id=user_id, user_name=None, chat_id=chat_id)
                 SESSION.add(new_request)
-                SESSION.commit()
+            SESSION.commit()
         except Exception as e:
             SESSION.rollback()
             raise e
