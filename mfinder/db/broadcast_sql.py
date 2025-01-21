@@ -1,44 +1,36 @@
 import threading
-import asyncio
-from sqlalchemy import create_engine, Column, TEXT, BigInteger
+from sqlalchemy import create_engine
+from sqlalchemy import Column, TEXT, BigInteger
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.pool import QueuePool
-from mfinder import DB_URL, LOGGER
+from mfinder import DB_URL
+from sqlalchemy import create_engine, Column, String, Integer, Boolean, BigInteger, Numeric
 
 BASE = declarative_base()
+
 
 class Broadcast(BASE):
     __tablename__ = "broadcast"
     user_id = Column(BigInteger, primary_key=True)
-    user_name = Column(TEXT)
+    user_name = Column(String(255))
 
     def __init__(self, user_id, user_name):
         self.user_id = user_id
         self.user_name = user_name
 
+
 def start() -> scoped_session:
-    engine = create_engine(DB_URL, pool_size=5, max_overflow=10)
+    engine = create_engine(DB_URL, poolclass=QueuePool)
     BASE.metadata.bind = engine
     BASE.metadata.create_all(engine)
     return scoped_session(sessionmaker(bind=engine, autoflush=False))
 
+
 SESSION = start()
 INSERTION_LOCK = threading.RLock()
 
-async def reconnect():
-    """Reconnect to the database every 5 minutes."""
-    while True:
-        try:
-            SESSION.remove()  # Remove the current session
-            global SESSION
-            SESSION = start()  # Recreate the session
-            LOGGER.info("Reconnected to the database.")
-        except Exception as e:
-            LOGGER.warning("Reconnection failed: %s", str(e))
-        
-        await asyncio.sleep(10)  # Wait for 5 minutes (300 seconds)
 
 async def add_user(user_id, user_name):
     with INSERTION_LOCK:
@@ -49,6 +41,7 @@ async def add_user(user_id, user_name):
             SESSION.add(usr)
             SESSION.commit()
 
+
 async def is_user(user_id):
     with INSERTION_LOCK:
         try:
@@ -57,12 +50,14 @@ async def is_user(user_id):
         except NoResultFound:
             return False
 
+
 async def query_msg():
     try:
         query = SESSION.query(Broadcast.user_id).order_by(Broadcast.user_id)
         return query.all()
     finally:
         SESSION.close()
+
 
 async def del_user(user_id):
     with INSERTION_LOCK:

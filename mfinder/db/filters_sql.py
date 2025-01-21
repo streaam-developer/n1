@@ -1,13 +1,15 @@
 import threading
-import asyncio
-from sqlalchemy import create_engine, Column, TEXT, String
+from sqlalchemy import create_engine
+from sqlalchemy import Column, TEXT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.pool import QueuePool
-from mfinder import DB_URL, LOGGER
-
+from mfinder import DB_URL
+from sqlalchemy import create_engine, Column, String, Integer, Boolean, BigInteger, Numeric
 BASE = declarative_base()
+from sqlalchemy import create_engine, Column, String, Integer, Text
+from sqlalchemy.ext.declarative import declarative_base
 
 class Filters(BASE):
     __tablename__ = "filters"
@@ -18,27 +20,32 @@ class Filters(BASE):
         self.filters = filters
         self.message = message
 
+
+class Files(BASE):
+    __tablename__ = 'files'
+    file_name = Column(String(255), primary_key=True)  # Define a length for VARCHAR
+    file_id = Column(Text)
+    file_ref = Column(Text)
+    file_size = Column(Numeric)
+    file_type = Column(Text)
+    mime_type = Column(Text)
+    caption = Column(Text)
+
+    def __init__(self, filters, message):
+        self.filters = filters
+        self.message = message
+
+
 def start() -> scoped_session:
     engine = create_engine(DB_URL, poolclass=QueuePool)
     BASE.metadata.bind = engine
     BASE.metadata.create_all(engine)
     return scoped_session(sessionmaker(bind=engine, autoflush=False))
 
+
 SESSION = start()
 INSERTION_LOCK = threading.RLock()
 
-async def reconnect():
-    """Reconnect to the database every 5 minutes."""
-    while True:
-        try:
-            SESSION.remove()  # Remove the current session
-            global SESSION
-            SESSION = start()  # Recreate the session
-            LOGGER.info("Reconnected to the database.")
-        except Exception as e:
-            LOGGER.warning("Reconnection failed: %s", str(e))
-        
-        await asyncio.sleep(10)  # Wait for 5 minutes (300 seconds)
 
 async def add_filter(filters, message):
     with INSERTION_LOCK:
@@ -50,6 +57,7 @@ async def add_filter(filters, message):
             SESSION.commit()
             return True
 
+
 async def is_filter(filters):
     with INSERTION_LOCK:
         try:
@@ -57,6 +65,7 @@ async def is_filter(filters):
             return fltr
         except NoResultFound:
             return False
+
 
 async def rem_filter(filters):
     with INSERTION_LOCK:
@@ -67,6 +76,7 @@ async def rem_filter(filters):
             return True
         except NoResultFound:
             return False
+
 
 async def list_filters():
     try:
