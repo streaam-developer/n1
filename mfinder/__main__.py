@@ -3,37 +3,42 @@ import asyncio
 from pyrogram import Client, idle, __version__
 from pyrogram.raw.all import layer
 from mfinder import APP_ID, API_HASH, BOT_TOKEN, OWNER_ID
-import asyncio
 import os
-import signal
 
 uvloop.install()
 
- # Replace with your actual Telegram user ID
 
 async def send_restart_message(app):
     """
     Function to send a message to the owner indicating a successful restart.
     """
     try:
-        await app.send_message(chat_id=OWNER_ID, text="Bot has restarted successfully.")
+        await app.send_message(chat_id=OWNER_ID, text="Bot is restarting...")
     except Exception as e:
         print(f"Failed to send restart message: {e}")
 
-async def restart_bot():
+
+async def restart_bot(app):
     """
-    Function to restart the bot by exiting the current process.
+    Restart the bot without closing the terminal.
     """
     print("Restarting the bot...")
-    os.kill(os.getpid(), signal.SIGINT)  # Send SIGINT to terminate the bot
+    await send_restart_message(app)
+    await app.stop()  # Stop the current bot session
+    await asyncio.sleep(1)  # Give it a second before restarting
+    await app.start()  # Restart the bot session
+    print("Bot restarted successfully.")
 
-async def schedule_restart(interval_minutes):
+
+async def schedule_restart(interval_minutes, app):
     """
     Function to schedule the bot to restart at a given interval (in minutes).
     """
     while True:
-        await asyncio.sleep(interval_minutes * 60)  # Convert minutes to seconds
-        await restart_bot()
+        await asyncio.sleep(interval_minutes * 60)  # Wait for the interval
+        await restart_bot(app)  # Restart the bot
+
+
 async def main():
     plugins = dict(root="mfinder/plugins")
     app = Client(
@@ -51,10 +56,11 @@ async def main():
         )
 
         # Start the restart scheduler
-        asyncio.create_task(schedule_restart(1, app))  # Restart every 60 minutes
+        asyncio.create_task(schedule_restart(1, app))  # Restart every 1 minute
 
         await idle()
         print(f"{me.first_name} - @{me.username} - Stopped !!!")
+
 
 if __name__ == "__main__":
     asyncio.run(main())
