@@ -47,6 +47,23 @@ from mfinder.utils.utils import temp, is_subscribed
 FSUB_CHANNELS = [-1002348104910]
 
 # Handle private messages
+from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.errors import UserNotParticipant, RPCError
+import re
+
+# Check if a user is subscribed to a channel
+async def is_subscribed(bot, user_id, channel_id):
+    try:
+        member = await bot.get_chat_member(channel_id, user_id)
+        return member.status in ["member", "administrator", "creator"]
+    except UserNotParticipant:
+        return False
+    except RPCError as e:
+        print(f"Subscription check error for user {user_id} in channel {channel_id}: {e}")
+        return False
+
+# Handle private messages
 @Client.on_message(~filters.regex(r"^/") & filters.text & filters.private & filters.incoming)
 async def filter_(bot, message):
     user_id = message.from_user.id
@@ -60,12 +77,13 @@ async def filter_(bot, message):
         await message.reply_text("You are banned. You can't use this bot.", quote=True)
         return
 
+    # Check subscription for each channel in FSUB_CHANNELS
     unjoined_channels = []
-
     for channel_id in FSUB_CHANNELS:
-        if not await is_subscribed(bot, message, channel_id):
+        if not await is_subscribed(bot, user_id, channel_id):
             unjoined_channels.append(channel_id)
 
+    # Prompt user to join required channels
     if unjoined_channels:
         await message.reply_text(
             "Please join the required channels to use this bot.",
@@ -77,7 +95,6 @@ async def filter_(bot, message):
             ),
         )
         return
-
 
     # Check for filters
     fltr = await is_filter(message.text)
@@ -98,19 +115,19 @@ async def filter_(bot, message):
         else:
             await message.reply_text("No results found. Try again with a different query.", quote=True)
 
-
 # Handle group messages
 @Client.on_message(filters.group & ~filters.regex(r"^/") & filters.text & filters.incoming)
 async def group_filter_(bot, message):
     user_id = message.from_user.id
     group_id = message.chat.id
 
+    # Check subscription for each channel in FSUB_CHANNELS
     unjoined_channels = []
-
     for channel_id in FSUB_CHANNELS:
-        if not await is_subscribed(bot, message, channel_id):
+        if not await is_subscribed(bot, user_id, channel_id):
             unjoined_channels.append(channel_id)
 
+    # Prompt user to join required channels
     if unjoined_channels:
         await message.reply_text(
             "Please join the required channels to use this bot.",
@@ -123,14 +140,13 @@ async def group_filter_(bot, message):
         )
         return
 
-
     # Check for filters
     fltr = await is_filter(message.text)
     if fltr:
         await message.reply_text(text=fltr.message, quote=True)
         return
 
-    # Proceed with searching after joining the channel
+    # Proceed with search
     if 2 < len(message.text) < 100:
         search = message.text
         page_no = 1
@@ -139,24 +155,12 @@ async def group_filter_(bot, message):
         result, btn = await get_result(search, page_no, user_id, username)
 
         if result:
-            if btn:
-                await message.reply_text(
-                    f"{result}",
-                    reply_markup=InlineKeyboardMarkup(btn),
-                    quote=True,
-                )
-            else:
-                await message.reply_text(
-                    f"{result}",
-                    quote=True,
-                )
+            await message.reply_text(result, reply_markup=InlineKeyboardMarkup(btn) if btn else None, quote=True)
         else:
             await message.reply_text(
                 text="No results found.\nOr retry with the correct spelling 🤐",
                 quote=True,
             )
-
-
 
 
 # Update the callback query handler to handle file requests in group and send to PM
