@@ -13,7 +13,7 @@ BASE = declarative_base()
 
 
 class Files(BASE):
-    __tablename__ = "files"
+    __tablename__ = "files2"
     file_name = Column(TEXT, primary_key=True)
     file_id = Column(String(255))
     file_ref = Column(String(255))
